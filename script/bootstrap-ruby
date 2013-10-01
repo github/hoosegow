@@ -9,7 +9,7 @@
 set -e
 
 RBVER=$(cat .ruby-version)
-PROFILE=~/.profile
+PROFILE=~/.bashrc
 
 apt-get update
 apt-get install -y \
