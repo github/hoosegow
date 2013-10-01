@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+require './lib/hoosegow.rb'
+
+rd = Hoosegow.new ARGF.read
+puts rd.render

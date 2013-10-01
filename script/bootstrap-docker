@@ -1,0 +1,9 @@
+#!/bin/bash
+#
+# File: bootstrap-docker
+# 
+# Install ubuntu base image and build hoosegow image.
+
+docker pull ubuntu
+cd ../
+docker build -t=hoosegow ./hoosegow
