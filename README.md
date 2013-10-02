@@ -1,6 +1,6 @@
 # Hoosegow
 
-A Docker based aproach to rendering.
+A Docker jail for native rendering code.
 
 ## Install on Ubuntu 12.04
 
@@ -26,6 +26,8 @@ sudo reboot
 ```bash
 sudo script/bootstrap-docker
 ```
+
+**Go get another beer while ruby builds.**
 
 #### 3. Verify install
 
