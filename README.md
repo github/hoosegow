@@ -26,3 +26,10 @@ sudo reboot
 ```bash
 sudo script/bootstrap-docker
 ```
+
+#### Verify install
+
+```bash
+echo '{"type":"reverse","file":"hello world"}' | sudo docker run -i -a stdin -a stdout hoosegow
+# dlrow olleh
+```
