@@ -1,15 +1,14 @@
-require 'json'
 require 'hoosegow/convict/reverse'
+require 'json'
 
 class Hoosegow
   class Convict
-    def initialize(data)
-      @json_data = JSON.load(data)
-      @type      = @json_data.delete "type"
-    end
-
-    def render
-      send "render_#{@type}"
+    def self.render(data)
+      data = JSON.load(data)
+      type = data["type"]
+      args = data["args"]
+      
+      new.send "render_#{type}", *args
     end
   end
 end
