@@ -35,4 +35,4 @@ RUN /bin/bash -l -c 'bundle install'
 RUN /bin/bash -l -c 'bundle exec rspec'
 
 # Command to run when `docker run hoosegow`
-ENTRYPOINT ["/bin/bash", "-l", "-c", "bundle exec ruby ./hoosegow"]
+ENTRYPOINT ["/bin/bash", "-l", "-c", "bundle exec ruby bin/convict"]

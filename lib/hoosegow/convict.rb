@@ -7,7 +7,6 @@ class Hoosegow
       data = JSON.load(data)
       type = data["type"]
       args = data["args"]
-      
       new.send "render_#{type}", *args
     end
   end
