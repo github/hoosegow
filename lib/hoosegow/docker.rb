@@ -1,4 +1,4 @@
-require 'net/http'
+require 'hoosegow/core_ext/net_http_response'
 require 'json'
 require 'uri'
 
@@ -66,13 +66,3 @@ class Hoosegow
     end
   end
 end
-
-module Net
-  class HTTPResponse
-    alias_method :_body, :body
-    def body
-      defined?(@skip) ? return : _body
-    end
-  end
-end
-
