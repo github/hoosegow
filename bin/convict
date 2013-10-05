@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 $LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__) + '/../lib')
-require 'hoosegow'
 require 'bundler/setup'
+require 'hoosegow'
 
-puts Hoosegow::Convict.render(ARGF.read)
+puts Hoosegow::Convict.render(STDIN.read)

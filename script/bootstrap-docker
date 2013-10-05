@@ -4,6 +4,6 @@
 # 
 # Install ubuntu base image and build hoosegow image.
 
-docker pull ubuntu
+docker -H :4243 pull ubuntu
 cd ../
-docker build -t=hoosegow ./hoosegow
+docker -H :4243 build -t=hoosegow ./hoosegow

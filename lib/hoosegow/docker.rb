@@ -1,9 +1,10 @@
 require 'net/http'
-require 'socket'
 require 'json'
 require 'uri'
 
 class Hoosegow
+  # Minimal API client for Docker, allowing attaching to container
+  # stdin/stdout/stderr.
   class Docker
     def initialize(host, port, image)
       @host   = host
@@ -12,6 +13,7 @@ class Hoosegow
       @attach = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 0, :stream => 1}
     end
 
+    # Internal: Similar to `echo input | docker run -t=image`
     def run(input)
       res = post uri(:create), @create
       id  = JSON.load(res)["Id"]
@@ -28,15 +30,16 @@ class Hoosegow
       headers = {"Content-Type" => "application/json"}
       request = Net::HTTP::Post.new uri, headers
 
-      conn do |http|
+      Net::HTTP.start @host, @port do |http|
         if block_given?
-          res = http.request request, data do |response|
+          # Abort the request to keep the socket open.
+          http.request request do |response|
             response.instance_variable_set '@skip', true
           end
           yield
           sock = http.instance_variable_get '@socket'
-          sock.write data
-          sock.io.shutdown Socket::SHUT_WR
+          sock.io.write data
+          sock.io.close_write
           sock.io.read
         else
           http.request(request, data).body
@@ -45,14 +48,8 @@ class Hoosegow
     end
 
     def delete(uri)
-      conn do |http|
-        http.delete uri
-      end
-    end
-
-    def conn
       Net::HTTP.start @host, @port do |http|
-        yield http
+        http.delete uri
       end
     end
 
@@ -72,13 +69,9 @@ end
 
 module Net
   class HTTPResponse
-    alias_method :orig_body, :body
+    alias_method :_body, :body
     def body
-      if defined? @skip
-        return
-      else
-        orig_body
-      end
+      defined?(@skip) ? return : _body
     end
   end
 end
