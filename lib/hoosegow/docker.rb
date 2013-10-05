@@ -22,7 +22,7 @@ class Hoosegow
       end
       post uri(:wait, id)
       delete uri(:delete, id)
-      res
+      res.gsub /\n\z/, ''
     end
 
     private
