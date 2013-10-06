@@ -4,4 +4,4 @@ $LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__) + '/../lib')
 require 'bundler/setup'
 require 'hoosegow'
 
-puts Hoosegow::Convict.render(STDIN.read)
+puts Hoosegow::Convict.proxy_receive(STDIN.read)

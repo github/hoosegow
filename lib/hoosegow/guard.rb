@@ -3,13 +3,25 @@ require 'hoosegow/docker'
 class Hoosegow
   class Guard
     class << self
-      def method_missing(name, *args)
-        if name =~ /^render_(.+)$/
-          data = JSON.dump :type => $1, :args => args
+      # Public: Proxies method call to Convict running in a Docker container.
+      #
+      # args - Arguments that should be passed tothe Convict method.
+      #
+      # Returns the return value from the Convict method.
+      def proxy_send(name, args)
+        unless Hoosegow.development
+          data = JSON.dump :name => name, :args => args
           docker.run data
         else
-          super
+          Hoosegow::Convict.send name, *args
         end
+      end
+
+      private
+      # Internal: Simplifies the calling of proxy_call by allowing Convict
+      # methods to be called on the Guard class.
+      def method_missing(name, *args)
+        proxy_send name, args
       end
 
       def docker

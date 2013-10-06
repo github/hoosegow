@@ -4,11 +4,14 @@ require 'json'
 class Hoosegow
   class Convict
     class << self
-      def render(data)
+      # Public: Receives proxied method call from Guard.
+      #
+      # data - JSON hash specifying method name and arguments.
+      #
+      # Returns the return value of the specified function.
+      def proxy_receive(data)
         data = JSON.load(data)
-        type = data["type"]
-        args = data["args"]
-        send "render_#{type}", *args
+        send data["name"], *data["args"]
       end
     end
   end
