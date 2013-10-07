@@ -16,16 +16,20 @@ sudo reboot
 **Go get a beer while Ubuntu reboots.**
 
 ```bash
-  sudo sh -c "curl https://get.docker.io/gpg | apt-key add -"
-  sudo sh -c "echo deb http://get.docker.io/ubuntu docker main > /etc/apt/sources.list.d/docker.list"
-  sudo apt-get update
-  sudo apt-get install lxc-docker
+sudo sh -c "curl https://get.docker.io/gpg | apt-key add -"
+sudo sh -c "echo deb http://get.docker.io/ubuntu docker main > /etc/apt/sources.list.d/docker.list"
+sudo apt-get update
+sudo apt-get install lxc-docker
 ```
+
+#### 2. Configure Docker to listen on TCP 4243
+
+In `/etc/init/docker.conf`, change the `script` to `/usr/bin/docker -d -H 127.0.0.1:4243`
 
 #### 2. Build hoosegow image
 
 ```bash
-sudo script/bootstrap-docker
+rake bootstrap_docker
 ```
 
 **Go get another beer while ruby builds.**
@@ -33,7 +37,7 @@ sudo script/bootstrap-docker
 #### 3. Run tests
 
 ```bash
-rspec
+rake spec
 ```
 
 ## Usage

@@ -8,7 +8,7 @@ class Hoosegow
 end
 
 # Host where docker is running.
-Hoosegow.docker_host  = 'localhost'
+Hoosegow.docker_host  = '127.0.0.1'
 # Port where docker is running.
 Hoosegow.docker_port  = 4243
 # Name of docker image to use for containers.

@@ -18,7 +18,7 @@ class Hoosegow
       end
 
       private
-      # Internal: Simplifies the calling of proxy_call by allowing Convict
+      # Internal: Simplifies the calling of proxy_send by allowing Convict
       # methods to be called on the Guard class.
       def method_missing(name, *args)
         proxy_send name, args
