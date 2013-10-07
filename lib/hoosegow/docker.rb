@@ -17,7 +17,7 @@ class Hoosegow
     def run(input)
       res = post uri(:create), @create
       id  = JSON.load(res)["Id"]
-      res = post uri(:attach, id, @attach), input do
+      res = post uri(:attach, id, @attach), input, true do
         post uri(:start, id)
       end
       post uri(:wait, id)
@@ -25,19 +25,24 @@ class Hoosegow
       res.gsub /\n\z/, ''
     end
 
+    def build(name, tarfile)
+      post uri(:build, :t => name), tarfile
+    end
+
     private
-    def post(uri, data = '{}')
+    def post(uri, data = '{}', stream = false)
       headers = {"Content-Type" => "application/json"}
       request = Net::HTTP::Post.new uri, headers
 
       Net::HTTP.start @host, @port do |http|
-        if block_given?
+        if stream
           # Abort the request to keep the socket open.
           http.request request do |response|
             response.instance_variable_set '@skip', true
           end
-          yield
+          yield if block_given?
           sock = http.instance_variable_get '@socket'
+
           sock.io.write data
           sock.io.close_write
           sock.io.read
@@ -59,7 +64,8 @@ class Hoosegow
                :attach => "/containers/%s/attach",
                :start  => "/containers/%s/start",
                :wait   => "/containers/%s/wait",
-               :delete => "/containers/%s"}[endpoint]
+               :delete => "/containers/%s",
+               :build  => "/build"}[endpoint]
       path  = sprintf path, *args
       
       URI::HTTP.build(:path => path, :query => query).request_uri

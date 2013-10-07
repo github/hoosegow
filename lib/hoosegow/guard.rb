@@ -11,7 +11,7 @@ class Hoosegow
       def proxy_send(name, args)
         unless Hoosegow.development
           data = JSON.dump :name => name, :args => args
-          docker.run data
+          Hoosegow.docker.run data
         else
           Hoosegow::Convict.send name, *args
         end
@@ -22,10 +22,6 @@ class Hoosegow
       # methods to be called on the Guard class.
       def method_missing(name, *args)
         proxy_send name, args
-      end
-
-      def docker
-        @docker ||= Docker.new Hoosegow.docker_host, Hoosegow.docker_port, Hoosegow.docker_image
       end
     end
   end
