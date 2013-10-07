@@ -92,7 +92,6 @@ class Hoosegow
     # Returns the response body.
     def transport_request(request, data = '{}', stream = false)
       socket       = new_socket
-      socket.io.reopen(socket.io)
       request.body = data unless stream
       request.exec socket, "1.1", request.path
 

@@ -1,4 +1,3 @@
-require 'hoosegow/docker'
 require 'hoosegow/render'
 require 'json'
 
@@ -24,6 +23,7 @@ class Hoosegow
   def initialize(options = {})
     return if @no_proxy = options[:no_proxy]
 
+    require 'hoosegow/docker'
     @image          = options[:image] || 'hoosegow'
     @docker_options = {:host => options[:host],
                        :port => options[:port],
