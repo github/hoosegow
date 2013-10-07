@@ -51,6 +51,7 @@ class Hoosegow
     send data["name"], *data["args"]
   end
 
+  private
   # Build a docker image from the Dockerfile in the root directory of the gem.
   #
   # Returns build output text.

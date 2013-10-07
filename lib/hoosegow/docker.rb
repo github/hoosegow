@@ -17,8 +17,8 @@ class Hoosegow
     #                     port).
     def initialize(options = {})
       if options[:host] || options[:port]
-        @host   = host || "127.0.0.1"
-        @port   = port || 4243
+        @host   = options[:host] || "127.0.0.1"
+        @port   = options[:port] || 4243
       else
         @socket_path = options[:socket] || "/var/run/docker.sock"
       end
@@ -31,14 +31,14 @@ class Hoosegow
     #
     # Returns the data from the container's stdout.
     def run(image, input)
-      create = create = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => image
+      create = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => image
       res    = post uri(:create), create
       id     = JSON.load(res)["Id"]
 
-      attach = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 0, :stream => 1}
-      res    = post uri(:attach, id, attach), input do
-        post uri(:start, id)
-      end
+      post uri(:start, id)
+
+      attach = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 1, :stream => 1}
+      res    = post uri(:attach, id, attach), input, true
 
       post uri(:wait, id)
       delete uri(:delete, id)
@@ -60,14 +60,14 @@ class Hoosegow
     #
     # uri    - API URI to POST to.
     # data   - Data for POST body.
-    # &block - Will be yielded to after writing request body and before reading
-    #          the response.
+    # stream - Hijack the HTTP connection's socket and shutdown writing after
+    #          sending the data.
     #
     # Returns the response body.
-    def post(uri, data = '{}', &block)
+    def post(uri, data = '{}', stream = false)
       headers = {"Content-Type" => "application/json"}
       request = Net::HTTP::Post.new uri, headers
-      transport_request request, data, &block
+      transport_request request, data, stream
     end
 
     # Private: Send a DELETE request to the API.
@@ -86,26 +86,24 @@ class Hoosegow
     #
     # request - A Net::HTTPResponse object without a body set.
     # data    - Data to be used as body for POST requests.
+    # stream  - Hijack the HTTP connection's socket and shutdown writing after
+    #           sending the data.
     #
     # Returns the response body.
-    def transport_request(request, data = '{}')
-      socket = new_socket
-      request.body = data unless block_given?
+    def transport_request(request, data = '{}', stream = false)
+      socket       = new_socket
+      socket.io.reopen(socket.io)
+      request.body = data unless stream
       request.exec socket, "1.1", request.path
-
-      if block_given?
-        yield
-        socket.write data
-        socket.io.close_write
-      end
 
       begin
         response = Net::HTTPResponse.read_new(socket)
       end while response.kind_of?(Net::HTTPContinue)
-      response.reading_body(socket, request.response_body_permitted?) { }
 
+      socket.write(data + "\n") if stream
+
+      response.reading_body(socket, request.response_body_permitted?) { }
       body = response.body
-      socket.close
       body
     end
 
@@ -115,9 +113,9 @@ class Hoosegow
     def new_socket
       socket = if @socket_path
                  UNIXSocket.new(@socket_path)
-                else
-                  TCPSocket.open @host, @port
-                end
+               else
+                 TCPSocket.open @host, @port
+               end
       Net::BufferedIO.new socket
     end
 
