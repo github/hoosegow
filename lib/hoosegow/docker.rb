@@ -17,7 +17,7 @@ class Hoosegow
     def run(input)
       res = post uri(:create), @create
       id  = JSON.load(res)["Id"]
-      res = post uri(:attach, id, @attach), input, true do
+      res = post uri(:attach, id, @attach), input do
         post uri(:start, id)
       end
       post uri(:wait, id)
@@ -30,25 +30,22 @@ class Hoosegow
     end
 
     private
-    def post(uri, data = '{}', stream = false)
+    def post(uri, data = '{}')
       headers = {"Content-Type" => "application/json"}
       request = Net::HTTP::Post.new uri, headers
 
       Net::HTTP.start @host, @port do |http|
-        if stream
-          # Abort the request to keep the socket open.
-          http.request request do |response|
-            response.instance_variable_set '@skip', true
-          end
-          yield if block_given?
-          sock = http.instance_variable_get '@socket'
-
-          sock.io.write data
-          sock.io.close_write
-          sock.io.read
-        else
-          http.request(request, data).body
-        end
+        res = if block_given?
+               http.request request do |response|
+                 socket = response.instance_variable_get '@socket'
+                 yield
+                 socket.write data
+                 socket.io.close_write
+               end
+             else
+               http.request request, data
+             end
+        res.body
       end
     end
 
