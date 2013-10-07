@@ -2,6 +2,7 @@ require 'hoosegow/render/reverse'
 
 class Hoosegow
   module Render
+    # Patch the methods defined in Hoosegow::Render to proxy to Docker.
     instance_methods.each do |name|
       old = instance_method name
 
