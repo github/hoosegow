@@ -21,10 +21,6 @@ sudo apt-get update
 sudo apt-get install lxc-docker
 ```
 
-#### 2. Configure Docker to listen on TCP 4243
-
-In `/etc/init/docker.conf`, change the `script` to `/usr/bin/docker -d -H 127.0.0.1:4243`
-
 #### 2. Build hoosegow image
 
 The Docker image is built when Hoosegow is initialized, but the first run can take a long time. You can get this run out of the way by running a rake task.
