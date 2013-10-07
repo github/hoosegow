@@ -1,7 +1,8 @@
 #!/usr/bin/env ruby
 
 $LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__) + '/../lib')
-require 'bundler/setup'
 require 'hoosegow'
+require 'bundler/setup'
 
-puts Hoosegow::Convict.proxy_receive(STDIN.read)
+hoosegow = Hoosegow.new :no_proxy => true
+puts hoosegow.proxy_receive(STDIN.read)

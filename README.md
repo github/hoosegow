@@ -2,7 +2,6 @@
 
 A Docker jail for native rendering code.
 
-
 ## Install on Ubuntu 12.04
 
 #### 1. Install Docker
@@ -28,6 +27,8 @@ In `/etc/init/docker.conf`, change the `script` to `/usr/bin/docker -d -H 127.0.
 
 #### 2. Build hoosegow image
 
+The Docker image is built when Hoosegow is initialized, but the first run can take a long time. You can get this run out of the way by running a rake task.
+
 ```bash
 rake bootstrap_docker
 ```
@@ -42,41 +43,49 @@ rake spec
 
 ## Usage
 
-Hoosegow has two main components, the `Guard` and the `Convict`. The `Convict` is intended to run inside of a docker container and does the actual work of rendering files. The `Guard` launches and manages docker instances. As a simple demonstration, `Convict` has the `render_reverse` ability, which reverses the input string.
+Hoowgow runs both in your code and in a Docker container. When you call `render_*` on a Hoosegow instance, it proxies the method call to another instance of Hoosegow running inside a docker container.
 
-#### Configuring Hoosegow
+#### Connecting to Docker
 
-You can tell Hoosegow if Docker is running in a non-standard location or if we are using a non-standard docker image.
+By default Docker's API listens locally on a Unix socket. If you are running Docker with it's default configuration, you don't need to worry about configuring Hoosegow.
+
+**Configure Hoosegow to connect to a non-standard Unix socket.**
 
 ```ruby
-Hoosegow.docker_host  = 'localhost'
-Hoosegow.docker_port  = 4243
-Hoosegow.docker_image = 'hoosegow'
+h = Hoosegow.new :socket => '/path/to/socket'
+h.render_reverse 'foobar'
+# => "raboof"
+```
+
+**Configure Hoosegow to connect to a Docker daemon running on another computer.**
+
+```ruby
+h = Hoosegow.new :host => '192.168.1.192', :port => 4243
+h.render_reverse 'foobar'
+# => "raboof"
 ```
 
 #### Rendering a file
 
-To render a file, you call the `Hoosegow::Guard#render_#{type}` function for a type defined in `Hoosegow::Convict`. Call the `Guard` function with whatever arguments the `Convict` function accepts.
+To render a file, you call the `Hoosegow#render_#{type}` for any render function defined. This method call will be proxied to another Hoosegow instance running in a docker container.
 
 ```ruby
-input  = "hello world!"
-output = Hoosegow::Guard.render_reverse input
+input    = "hello world!"
+output   = hoosegow.render_reverse input
 # => "!dlrow olleh"
 ```
 
 ## Extending
 
-Adding the ability to render a new file type is easy. Just add a new `render_#{type}` method to `Hoosegow::Convict`. For the sake of organization, add these files to `lib/hoosegow/convict/#{type}.rb`
+Adding the ability to render a new file type is easy. Just add a new `render_#{type}` method to the `Hoosegow::Render` module in `lib/hoosegow/render/#{type}.rb`.
 
 ```ruby
-# File: lib/hoosegow/convict/join.rb
+# File: lib/hoosegow/render/join.rb
 
 class Hoosegow
-  class Convict
-    class << self
-      def render_join(*args, separator = '_')
-        args.join separator
-      end
+  module Render
+    def render_join(*args)
+      args.join "_"
     end
   end
 end
