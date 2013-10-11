@@ -1,4 +1,5 @@
 require './lib/hoosegow'
+require 'stringio'
 
 class Hoosegow
   def render_foobar
@@ -6,18 +7,24 @@ class Hoosegow
   end
 end
 
+def build_file(*args)
+  data = JSON.dump *args
+  data += "\n"
+  StringIO.new data
+end
+
 describe Hoosegow, "#proxy_receive" do
   it "calls appropriate render method" do
     hoosegow = Hoosegow.new :no_proxy => true
-    data = JSON.dump :name => "render_reverse", :args => ["foobar"]
-    hoosegow.proxy_receive(data).should eq("raboof")
+    file = build_file :name => "render_reverse", :args => ["foobar"]
+    hoosegow.proxy_receive(file).should eq("raboof")
   end
 end
 
 describe Hoosegow, "#proxy_send" do
   it "calls appropriate render method via proxy" do
     hoosegow = Hoosegow.new :prebuilt => true
-    hoosegow.proxy_send("render_reverse",["foobar"]).should eq("raboof")
+    hoosegow.proxy_send("render_reverse","foobar").should eq("raboof")
   end
 end
 
