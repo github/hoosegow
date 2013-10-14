@@ -2,7 +2,7 @@ require './lib/hoosegow'
 
 begin
   require File.expand_path(File.dirname(__FILE__) + '/../config')
-rescue ImportError
+rescue LoadError
   CONFIG = {}
 end
 

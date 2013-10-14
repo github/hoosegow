@@ -4,7 +4,7 @@ require 'rspec/core/rake_task'
 
 begin
 	require File.expand_path(File.dirname(__FILE__) + '/config')
-rescue ImportError
+rescue LoadError
 	CONFIG = {}
 end
 
