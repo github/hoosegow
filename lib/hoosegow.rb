@@ -58,6 +58,7 @@ class Hoosegow
     docker.build tar
   end
 
+  private
   # Docker instance.
   def docker
     @docker ||= Docker.new @docker_options

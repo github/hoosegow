@@ -29,20 +29,14 @@ end
 
 desc "Benchmark render_reverse run in docker"
 task :benchmark => :bootstrap_if_changed do
-  start = Time.now
   hoosegow = Hoosegow.new CONFIG
-  instantiated = Time.now
-  puts "Instantiated Hoosegow in #{instantiated - start} seconds"
 
-  hoosegow.docker.start
-  prepared = Time.now
-  puts "Prepared Docker run in #{prepared - instantiated } seconds"
-
-  sleep 1
-
-  hoosegow.render_reverse "foobar"
-  ran = Time.now
-  puts "Ran render_reverse in #{ran - prepared - 1} seconds"
+  10.times do |i|
+    sleep 0.5
+    start = Time.now
+    hoosegow.render_reverse "foobar"
+    puts "render_reverse run ##{i} took #{Time.now - start} seconds"
+  end
 end
 
 desc "Bootstrap docker if the directory has changed since last bootstrap"

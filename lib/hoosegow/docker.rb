@@ -33,8 +33,8 @@ class Hoosegow
     #
     # Returns the data from the container's stdout.
     def run(data)
-      # Start a container if one isn't already.
-      start unless @id
+      # Start a container if one isn't running yet.
+      start_container unless @id
 
       # Attach to container.
       params  = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 1, :stream => 1}
@@ -47,23 +47,11 @@ class Hoosegow
       # Delete the container
       delete = Net::HTTP::Delete.new uri(:delete, @id), HEADERS
       transport_request delete
-      @id = nil
+
+      # Start a container for the next run.
+      start_container
       
       res.gsub /\n\z/, ''
-    end
-
-    # Public: Create and start a Docker container. Run this during downtime
-    # between jobs to speed up the actual run.
-    #
-    # Returns nothing.
-    def start
-      # Create container.
-      create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => 'hoosegow'
-      res         = post uri(:create), create_body
-      @id         = JSON.load(res)["Id"]
-
-      # Start container
-      post uri(:start, @id)
     end
 
     # Public: Build a new image.
@@ -76,6 +64,19 @@ class Hoosegow
     end
 
     private
+    # Public: Create and start a Docker container.
+    #
+    # Returns nothing.
+    def start_container
+      # Create container.
+      create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => 'hoosegow'
+      res         = post uri(:create), create_body
+      @id         = JSON.load(res)["Id"]
+
+      # Start container
+      post uri(:start, @id)
+    end
+
     # Private: Send a POST request to the API.
     #
     # uri    - API URI to POST to.
