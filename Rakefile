@@ -14,7 +14,7 @@ task :default => :spec
 
 # Takes md5sum of current directory's contents.
 def directory_md5
-  `find . -not -path './.*' -and -not -name '.*' -type f -print0 | xargs -0 md5 | md5`
+  `find . -not -path './.*' -and -not -name '.*' -type f -print0 | xargs -0 md5sum | md5sum`
 end
 
 # Checks if there have been changes to
