@@ -18,17 +18,13 @@ class Hoosegow
   #                       socket.
   #           :port     - TCP port where Docker daemon is running. Don't set
   #                       this if Docker is listening locally on a Unix socket.
-  #           :image    - The name of the docker image to build (defaults to
-  #                       "hoosegow").
   def initialize(options = {})
     return if @no_proxy = options[:no_proxy]
 
     require 'hoosegow/docker'
-    @image          = options[:image] || 'hoosegow'
     @docker_options = {:host => options[:host],
                        :port => options[:port],
                        :socket => options[:socket]}
-    build_image unless options[:prebuilt]
   end
 
   # Proxies method call to instance running in a docker container.
@@ -38,7 +34,7 @@ class Hoosegow
   # Returns the return value from the docker instance method.
   def proxy_send(name, args)
     data = JSON.dump :name => name, :args => args
-    docker.run @image, data
+    docker.run data
   end
 
   # Receives proxied method call from the non-docker instance.
@@ -51,14 +47,13 @@ class Hoosegow
     send data["name"], *data["args"]
   end
 
-  private
   # Build a docker image from the Dockerfile in the root directory of the gem.
   #
   # Returns build output text.
   def build_image
     base_dir = File.expand_path(File.dirname(__FILE__) + '/..')
     tar = `tar -cC #{base_dir} .`
-    docker.build @image, tar
+    docker.build tar
   end
 
   # Docker instance.
