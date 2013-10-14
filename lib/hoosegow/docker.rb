@@ -26,17 +26,37 @@ class Hoosegow
       end
     end
 
-    # Public: Creates, starts, and attaches to a new docker container, leaving
-    # the socket open, waiting for data. Calling this during downtime between
-    # Hoosegow runs will dramatically reduce the time of the actual run.
-    def prepare_run
-      # Cleanup from last run.
-      if @id
-        post uri(:wait, @id)
-        delete = Net::HTTP::Delete.new uri(:delete, @id), HEADERS
-        transport_request delete
-      end
+    # Public: Create and start a Docker container if one hasn't been started
+    # already, then attach to it its stdin/stdout.
+    #
+    # data - The data to pipe to the container's stdin.
+    #
+    # Returns the data from the container's stdout.
+    def run(data)
+      # Start a container if one isn't already.
+      start unless @id
 
+      # Attach to container.
+      params  = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 1, :stream => 1}
+      request = Net::HTTP::Post.new uri(:attach, @id, params), HEADERS
+      res     = transport_request request, data
+
+      # Wait for the container to finish
+      post uri(:wait, @id)
+
+      # Delete the container
+      delete = Net::HTTP::Delete.new uri(:delete, @id), HEADERS
+      transport_request delete
+      @id = nil
+      
+      res.gsub /\n\z/, ''
+    end
+
+    # Public: Create and start a Docker container. Run this during downtime
+    # between jobs to speed up the actual run.
+    #
+    # Returns nothing.
+    def start
       # Create container.
       create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => 'hoosegow'
       res         = post uri(:create), create_body
@@ -44,26 +64,9 @@ class Hoosegow
 
       # Start container
       post uri(:start, @id)
-
-      # Attach to container.
-      params  = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 1, :stream => 1}
-      request = Net::HTTP::Post.new uri(:attach, @id, params), HEADERS
-      start_request request
-      @prepared = true
     end
 
-    # Internal: Similar to `echo $data | docker run -t=image`
-    #
-    # data - The data to pipe to the container's stdin.
-    #
-    # Returns the data from the container's stdout.
-    def run(data)
-      prepare_run unless @prepared
-      @prepared = false
-      finish_request(data).gsub /\n\z/, ''
-    end
-
-    # Internal: Build a new image.
+    # Public: Build a new image.
     #
     # tarfile - Tarred data for creating image. See http://docs.docker.io/en/latest/api/docker_remote_api_v1.5/#build-an-image-from-dockerfile-via-stdin
     #
@@ -91,37 +94,18 @@ class Hoosegow
     # request - A Net::HTTPResponse object without a body set.
     #
     # Returns the response body.
-    def transport_request(request)
-      start_request request
-      finish_request
-    end
-
-    # Private: Sends the HTTP request to Docker API and read response headers.
-    #
-    # request - The Net::HTTPRequest object to send.
-    #
-    # Returns nothing.
-    def start_request(request)
-      @request = request
-      @socket  = new_socket
-      @request.exec @socket, "1.1", @request.path
+    def transport_request(request, data = nil)
+      request = request
+      socket  = new_socket
+      request.exec socket, "1.1", request.path
 
       begin
-        @response = Net::HTTPResponse.read_new(@socket)
-      end while @response.kind_of?(Net::HTTPContinue)      
-    end
+        response = Net::HTTPResponse.read_new(socket)
+      end while response.kind_of?(Net::HTTPContinue)
 
-    # Private: Writes any aditional data to the HTTP socket used during the
-    # previous start_request and reads the response body.
-    #
-    # data - Any additional data to be sent. This should be nil for normal HTTP
-    #        requests.
-    #
-    # Returns response body string.
-    def finish_request(data = nil)
-      @socket.write(data + "\n") if data
-      @response.reading_body(@socket, @request.response_body_permitted?) { }
-      @response.body
+      socket.write(data + "\n") if data
+      response.reading_body(socket, request.response_body_permitted?) { }
+      response.body
     end
 
     # Private: Create a connection to API host or local Unix socket.
