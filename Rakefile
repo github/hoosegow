@@ -2,13 +2,19 @@ $LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__) + '/lib')
 require 'hoosegow'
 require 'rspec/core/rake_task'
 
+begin
+	require File.expand_path(File.dirname(__FILE__) + '/config')
+rescue ImportError
+	CONFIG = {}
+end
+
 RSpec::Core::RakeTask.new(:spec)
 Rake::Task[:spec].prerequisites << :bootstrap_if_changed
 task :default => :spec
 
 # Takes md5sum of current directory's contents.
 def directory_md5
-  `find . -not -path './.*' -and -not -name '.*' -type f -print0 | xargs -0 md5sum | md5sum`
+  `find . -not -path './.*' -and -not -name '.*' -type f -print0 | xargs -0 md5 | md5`
 end
 
 # Checks if there have been changes to
@@ -30,6 +36,6 @@ end
 
 desc "Building docker image."
 task :bootstrap_docker do
-  Hoosegow.new
+  Hoosegow.new(CONFIG).build_image
   write_md5
 end
