@@ -9,7 +9,7 @@ class Hoosegow
   class Docker
     HEADERS = {"Content-Type" => "application/json"}
 
-    # Internal: Initialize a new Docker API client.
+    # Initialize a new Docker API client.
     #
     # options - Connection options.
     #           :host   - IP or hostname to connect to (unless using Unix
@@ -26,11 +26,15 @@ class Hoosegow
       end
     end
 
+    # Public: Creates, starts, and attaches to a new docker container, leaving
+    # the socket open, waiting for data. Calling this during downtime between
+    # Hoosegow runs will dramatically reduce the time of the actual run.
     def prepare_run
       # Cleanup from last run.
       if @id
         post uri(:wait, @id)
-        delete uri(:delete, @id)
+        delete = Net::HTTP::Delete.new uri(:delete, @id), HEADERS
+        transport_request delete
       end
 
       # Create container.
@@ -48,7 +52,7 @@ class Hoosegow
       @prepared = true
     end
 
-    # Internal: Similar to `echo input | docker run -t=image`
+    # Internal: Similar to `echo $data | docker run -t=image`
     #
     # data - The data to pipe to the container's stdin.
     #
@@ -73,8 +77,6 @@ class Hoosegow
     #
     # uri    - API URI to POST to.
     # data   - Data for POST body.
-    # stream - Hijack the HTTP connection's socket and shutdown writing after
-    #          sending the data.
     #
     # Returns the response body.
     def post(uri, data = '{}')
@@ -83,21 +85,10 @@ class Hoosegow
       transport_request request
     end
 
-    # Private: Send a DELETE request to the API.
-    #
-    # uri    - API URI to POST to.
-    #
-    # Returns the response body.
-    def delete(uri)
-      request = Net::HTTP::Delete.new uri, HEADERS
-      transport_request request
-    end
-
     # Private: Connects to API host or local socket, transmits the request, and
     # reads in the response.
     #
     # request - A Net::HTTPResponse object without a body set.
-    # data    - Data to be used as body for POST requests.
     #
     # Returns the response body.
     def transport_request(request)
@@ -105,6 +96,11 @@ class Hoosegow
       finish_request
     end
 
+    # Private: Sends the HTTP request to Docker API and read response headers.
+    #
+    # request - The Net::HTTPRequest object to send.
+    #
+    # Returns nothing.
     def start_request(request)
       @request = request
       @socket  = new_socket
@@ -115,6 +111,13 @@ class Hoosegow
       end while @response.kind_of?(Net::HTTPContinue)      
     end
 
+    # Private: Writes any aditional data to the HTTP socket used during the
+    # previous start_request and reads the response body.
+    #
+    # data - Any additional data to be sent. This should be nil for normal HTTP
+    #        requests.
+    #
+    # Returns response body string.
     def finish_request(data = nil)
       @socket.write(data + "\n") if data
       @response.reading_body(@socket, @request.response_body_permitted?) { }

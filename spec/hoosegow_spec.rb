@@ -1,13 +1,16 @@
 require './lib/hoosegow'
-require File.expand_path(File.dirname(__FILE__) + '/../config')
-CONFIG.merge! :prebuilt => true
+
+begin
+  require File.expand_path(File.dirname(__FILE__) + '/../config')
+rescue ImportError
+  CONFIG = {}
+end
 
 class Hoosegow
   def render_foobar
     "foobar"
   end
 end
-
 
 describe Hoosegow, "#proxy_receive" do
   it "calls appropriate render method" do

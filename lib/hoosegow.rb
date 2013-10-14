@@ -1,4 +1,5 @@
 require 'hoosegow/render'
+require 'hoosegow/docker'
 require 'json'
 
 class Hoosegow
@@ -20,8 +21,6 @@ class Hoosegow
   #                       this if Docker is listening locally on a Unix socket.
   def initialize(options = {})
     return if @no_proxy = options[:no_proxy]
-
-    require 'hoosegow/docker'
     @docker_options = {:host => options[:host],
                        :port => options[:port],
                        :socket => options[:socket]}
@@ -29,6 +28,7 @@ class Hoosegow
 
   # Proxies method call to instance running in a docker container.
   #
+  # name - The method to call in the docker instance.
   # args - Arguments that should be passed to the docker instance method.
   #
   # Returns the return value from the docker instance method.

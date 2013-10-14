@@ -1,7 +1,12 @@
 $LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__) + '/lib')
 require 'hoosegow'
 require 'rspec/core/rake_task'
-require File.expand_path(File.dirname(__FILE__) + '/config')
+
+begin
+	require File.expand_path(File.dirname(__FILE__) + '/config')
+rescue ImportError
+	CONFIG = {}
+end
 
 RSpec::Core::RakeTask.new(:spec)
 Rake::Task[:spec].prerequisites << :bootstrap_if_changed
