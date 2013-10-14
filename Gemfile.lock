@@ -1,3 +1,9 @@
+PATH
+  remote: .
+  specs:
+    hoosegow (0.2.0)
+      json
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -16,5 +22,5 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  json
+  hoosegow!
   rspec
