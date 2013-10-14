@@ -1,9 +1,11 @@
+require 'hoosegow/serialize'
 require 'hoosegow/render'
 require 'hoosegow/docker'
 require 'json'
 
 class Hoosegow
   include Render
+  include Serialize
 
   # Initialize a Hoosegow instance.
   #
@@ -33,7 +35,7 @@ class Hoosegow
   #
   # Returns the return value from the docker instance method.
   def proxy_send(name, args)
-    data = JSON.dump :name => name, :args => args
+    data = dump_method_call name, args
     docker.run data
   end
 
@@ -42,8 +44,8 @@ class Hoosegow
   # data - JSON hash specifying method name and arguments.
   #
   # Returns the return value of the specified function.
-  def proxy_receive(data)
-    data = JSON.load(data)
+  def proxy_receive(pipe)
+    data = read_method_call pipe
     send data["name"], *data["args"]
   end
 

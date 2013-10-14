@@ -1,4 +1,5 @@
 require './lib/hoosegow'
+require 'stringio'
 
 begin
   require File.expand_path(File.dirname(__FILE__) + '/../config')
@@ -12,11 +13,17 @@ class Hoosegow
   end
 end
 
+def build_file(*args)
+  data = JSON.dump *args
+  data += "\n"
+  StringIO.new data
+end
+
 describe Hoosegow, "#proxy_receive" do
   it "calls appropriate render method" do
     hoosegow = Hoosegow.new CONFIG.merge(:no_proxy => true)
-    data = JSON.dump :name => "render_reverse", :args => ["foobar"]
-    hoosegow.proxy_receive(data).should eq("raboof")
+    file = build_file :name => "render_reverse", :args => ["foobar"]
+    hoosegow.proxy_receive(file).should eq("raboof")
   end
 end
 
