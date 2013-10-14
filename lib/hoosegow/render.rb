@@ -10,7 +10,7 @@ class Hoosegow
         if no_proxy?
           old.bind(self).call *args
         else
-          proxy_send name, *args
+          proxy_send name, args
         end
       end
     end

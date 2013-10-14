@@ -7,7 +7,9 @@ class Hoosegow
   # Minimal API client for Docker, allowing attaching to container
   # stdin/stdout/stderr.
   class Docker
-    # Internal: Initialize a new Docker API client.
+    HEADERS = {"Content-Type" => "application/json"}
+
+    # Initialize a new Docker API client.
     #
     # options - Connection options.
     #           :host   - IP or hostname to connect to (unless using Unix
@@ -24,35 +26,53 @@ class Hoosegow
       end
     end
 
-    # Internal: Similar to `echo input | docker run -t=image`
+    # Public: Create and start a Docker container if one hasn't been started
+    # already, then attach to it its stdin/stdout.
     #
-    # image - The name of the image to run.
-    # input - The data to pipe to the container's stdin.
+    # data - The data to pipe to the container's stdin.
     #
     # Returns the data from the container's stdout.
-    def run(image, input)
-      create = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => image
-      res    = post uri(:create), create
-      id     = JSON.load(res)["Id"]
+    def run(data)
+      # Start a container if one isn't already.
+      start unless @id
 
-      post uri(:start, id)
+      # Attach to container.
+      params  = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 1, :stream => 1}
+      request = Net::HTTP::Post.new uri(:attach, @id, params), HEADERS
+      res     = transport_request request, data
 
-      attach = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 1, :stream => 1}
-      res    = post uri(:attach, id, attach), input, true
+      # Wait for the container to finish
+      post uri(:wait, @id)
 
-      post uri(:wait, id)
-      delete uri(:delete, id)
+      # Delete the container
+      delete = Net::HTTP::Delete.new uri(:delete, @id), HEADERS
+      transport_request delete
+      @id = nil
+      
       res.gsub /\n\z/, ''
     end
 
-    # Internal: Build a new image.
+    # Public: Create and start a Docker container. Run this during downtime
+    # between jobs to speed up the actual run.
     #
-    # image   - The name of the image to create.
+    # Returns nothing.
+    def start
+      # Create container.
+      create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => 'hoosegow'
+      res         = post uri(:create), create_body
+      @id         = JSON.load(res)["Id"]
+
+      # Start container
+      post uri(:start, @id)
+    end
+
+    # Public: Build a new image.
+    #
     # tarfile - Tarred data for creating image. See http://docs.docker.io/en/latest/api/docker_remote_api_v1.5/#build-an-image-from-dockerfile-via-stdin
     #
     # Returns build results.
-    def build(image, tarfile)
-      post uri(:build, :t => image), tarfile
+    def build(tarfile)
+      post uri(:build, :t => 'hoosegow'), tarfile
     end
 
     private
@@ -60,24 +80,11 @@ class Hoosegow
     #
     # uri    - API URI to POST to.
     # data   - Data for POST body.
-    # stream - Hijack the HTTP connection's socket and shutdown writing after
-    #          sending the data.
     #
     # Returns the response body.
-    def post(uri, data = '{}', stream = false)
-      headers = {"Content-Type" => "application/json"}
-      request = Net::HTTP::Post.new uri, headers
-      transport_request request, data, stream
-    end
-
-    # Private: Send a DELETE request to the API.
-    #
-    # uri    - API URI to POST to.
-    #
-    # Returns the response body.
-    def delete(uri)
-      headers = {"Content-Type" => "application/json"}
-      request = Net::HTTP::Delete.new uri, headers
+    def post(uri, data = '{}')
+      request = Net::HTTP::Post.new uri, HEADERS
+      request.body = data
       transport_request request
     end
 
@@ -85,25 +92,20 @@ class Hoosegow
     # reads in the response.
     #
     # request - A Net::HTTPResponse object without a body set.
-    # data    - Data to be used as body for POST requests.
-    # stream  - Hijack the HTTP connection's socket and shutdown writing after
-    #           sending the data.
     #
     # Returns the response body.
-    def transport_request(request, data = '{}', stream = false)
-      socket       = new_socket
-      request.body = data unless stream
+    def transport_request(request, data = nil)
+      request = request
+      socket  = new_socket
       request.exec socket, "1.1", request.path
 
       begin
         response = Net::HTTPResponse.read_new(socket)
       end while response.kind_of?(Net::HTTPContinue)
 
-      socket.write(data + "\n") if stream
-
+      socket.write(data + "\n") if data
       response.reading_body(socket, request.response_body_permitted?) { }
-      body = response.body
-      body
+      response.body
     end
 
     # Private: Create a connection to API host or local Unix socket.
