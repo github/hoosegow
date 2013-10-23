@@ -13,17 +13,10 @@ class Hoosegow
   end
 end
 
-def build_file(*args)
-  data = JSON.dump *args
-  data += "\n"
-  StringIO.new data
-end
-
 describe Hoosegow, "#proxy_receive" do
   it "calls appropriate render method" do
     hoosegow = Hoosegow.new CONFIG.merge(:no_proxy => true)
-    file = build_file :name => "render_reverse", :args => ["foobar"]
-    hoosegow.proxy_receive(file).should eq("raboof")
+    hoosegow.proxy_receive("render_reverse", ["foobar"]).should eq("raboof")
   end
 end
 
