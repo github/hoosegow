@@ -104,7 +104,7 @@ class Hoosegow
         response = Net::HTTPResponse.read_new(socket)
       end while response.kind_of?(Net::HTTPContinue)
 
-      socket.write(data + "\n") if data
+      socket.write(data) if data
       response.reading_body(socket, request.response_body_permitted?) { }
       response.body
     end

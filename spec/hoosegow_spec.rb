@@ -1,5 +1,5 @@
 require './lib/hoosegow'
-require 'stringio'
+require 'msgpack'
 
 begin
   require File.expand_path(File.dirname(__FILE__) + '/../config')
@@ -16,7 +16,8 @@ end
 describe Hoosegow, "#proxy_receive" do
   it "calls appropriate render method" do
     hoosegow = Hoosegow.new CONFIG.merge(:no_proxy => true)
-    hoosegow.proxy_receive("render_reverse", ["foobar"]).should eq("raboof")
+    data = MessagePack.dump(["render_reverse", ["foobar"]])
+    hoosegow.proxy_receive(data).should eq("raboof")
   end
 end
 
