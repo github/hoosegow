@@ -2,7 +2,7 @@ require './lib/hoosegow'
 require 'msgpack'
 
 begin
-  require File.expand_path(File.dirname(__FILE__) + '/../config')
+  require_relative '/../config')
 rescue LoadError
   CONFIG = {}
 end
@@ -16,8 +16,9 @@ end
 describe Hoosegow, "#proxy_receive" do
   it "calls appropriate render method" do
     hoosegow = Hoosegow.new CONFIG.merge(:no_proxy => true)
-    data = MessagePack.dump(["render_reverse", ["foobar"]])
-    hoosegow.proxy_receive(data).should eq("raboof")
+    data = MessagePack.pack(["render_reverse", ["foobar"]])
+    result = hoosegow.proxy_receive(data)
+    MessagePack.unpack(result).should eq("raboof")
   end
 end
 

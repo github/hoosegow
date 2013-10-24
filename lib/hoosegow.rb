@@ -33,8 +33,9 @@ class Hoosegow
   #
   # Returns the return value from the docker instance method.
   def proxy_send(name, args)
-    data = MessagePack.dump [name, args]
-    docker.run data
+    data = MessagePack.pack [name, args]
+    result = docker.run data
+    MessagePack.unpack(result)
   end
 
   # Receives proxied method call from the non-docker instance.
@@ -43,8 +44,9 @@ class Hoosegow
   #
   # Returns the return value of the specified function.
   def proxy_receive(pipe)
-    name, args = MessagePack.load(pipe)
-    send name, *args
+    name, args = MessagePack.unpack(pipe)
+    result = send name, *args
+    MessagePack.pack(result)
   end
 
   # Build a docker image from the Dockerfile in the root directory of the gem.

@@ -50,8 +50,6 @@ class Hoosegow
 
       # Start a container for the next run.
       start_container
-      
-      res.gsub /\n\z/, ''
     end
 
     # Public: Build a new image.
@@ -140,7 +138,7 @@ class Hoosegow
                :delete => "/containers/%s",
                :build  => "/build"}[endpoint]
       path  = sprintf path, *args
-      
+
       URI::HTTP.build(:path => path, :query => query).request_uri
     end
   end
