@@ -48,6 +48,8 @@ end
 
 desc "Building docker image."
 task :bootstrap_docker do
-  Hoosegow.new(CONFIG).build_image
+  deps_dir = File.expand_path File.join(__FILE__, '../spec/hoosegow_deps')
+  Hoosegow.load_deps deps_dir
+  Hoosegow.build_image CONFIG
   write_md5
 end
