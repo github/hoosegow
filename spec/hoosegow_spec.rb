@@ -1,8 +1,8 @@
-require './lib/hoosegow'
+require_relative '../lib/hoosegow'
 require 'msgpack'
 
 begin
-  require_relative '/../config')
+  require_relative '../config'
 rescue LoadError
   CONFIG = {}
 end

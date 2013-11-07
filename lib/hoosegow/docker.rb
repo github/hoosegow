@@ -50,6 +50,8 @@ class Hoosegow
 
       # Start a container for the next run.
       start_container
+
+      res
     end
 
     # Public: Build a new image.
@@ -62,7 +64,7 @@ class Hoosegow
     end
 
     private
-    # Public: Create and start a Docker container.
+    # Private: Create and start a Docker container.
     #
     # Returns nothing.
     def start_container

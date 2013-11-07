@@ -1,4 +1,4 @@
-require 'hoosegow/render/reverse'
+require_relative 'render/reverse'
 
 class Hoosegow
   module Render

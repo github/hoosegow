@@ -1,5 +1,5 @@
-require 'hoosegow/render'
-require 'hoosegow/docker'
+require_relative 'hoosegow/render'
+require_relative 'hoosegow/docker'
 require 'msgpack'
 
 class Hoosegow
