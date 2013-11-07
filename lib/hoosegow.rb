@@ -1,5 +1,6 @@
 require_relative 'hoosegow/docker'
 require 'msgpack'
+require 'tempfile'
 
 class Hoosegow
   # Initialize a Hoosegow instance.
@@ -55,16 +56,17 @@ class Hoosegow
   #
   # Returns build output text.
   def self.build_image(docker_options)
-    docker = Docker.new docker_options
+    tmp = Tempfile.new 'hoosegow'
+
+    docker   = Docker.new docker_options
     base_dir = File.expand_path(File.dirname(__FILE__) + '/..')
-    cmd = "tar -cC #{base_dir} ."
+    `tar -c -f #{tmp.path} -C #{base_dir} .`
 
     parent = File.dirname @@deps_dir
     base   = File.basename @@deps_dir
-    cmd << "| tar -cC #{parent} #{base} @-"
+    `tar -u -f #{tmp.path} -C #{parent} #{base}`
 
-    tar = `#{cmd}`
-    docker.build tar
+    docker.build tmp.read
   end
 
   def self.load_deps(dir)
