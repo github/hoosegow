@@ -118,7 +118,9 @@ class Hoosegow
                else
                  TCPSocket.open @host, @port
                end
-      Net::BufferedIO.new socket
+      socket = Net::BufferedIO.new socket
+      socket.read_timeout = nil
+      socket
     end
 
     # Private: Build a URI for a given API endpount, encorporating any
