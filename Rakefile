@@ -1,9 +1,8 @@
-$LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__) + '/lib')
-require 'hoosegow'
+require_relative 'lib/hoosegow'
 require 'rspec/core/rake_task'
 
 begin
-	require File.expand_path(File.dirname(__FILE__) + '/config')
+	require_relative 'config'
 rescue LoadError
 	CONFIG = {}
 end
