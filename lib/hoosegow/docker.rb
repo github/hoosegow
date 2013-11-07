@@ -50,8 +50,8 @@ class Hoosegow
 
       # Start a container for the next run.
       start_container
-      
-      res.gsub /\n\z/, ''
+
+      res
     end
 
     # Public: Build a new image.
@@ -64,7 +64,7 @@ class Hoosegow
     end
 
     private
-    # Public: Create and start a Docker container.
+    # Private: Create and start a Docker container.
     #
     # Returns nothing.
     def start_container
@@ -140,7 +140,7 @@ class Hoosegow
                :delete => "/containers/%s",
                :build  => "/build"}[endpoint]
       path  = sprintf path, *args
-      
+
       URI::HTTP.build(:path => path, :query => query).request_uri
     end
   end
