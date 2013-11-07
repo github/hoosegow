@@ -1,8 +1,8 @@
-require './lib/hoosegow'
-require 'stringio'
+require_relative '../lib/hoosegow'
+require 'msgpack'
 
 begin
-  require File.expand_path(File.dirname(__FILE__) + '/../config')
+  require_relative '../config'
 rescue LoadError
   CONFIG = {}
 end
@@ -13,17 +13,12 @@ class Hoosegow
   end
 end
 
-def build_file(*args)
-  data = JSON.dump *args
-  data += "\n"
-  StringIO.new data
-end
-
 describe Hoosegow, "#proxy_receive" do
   it "calls appropriate render method" do
     hoosegow = Hoosegow.new CONFIG.merge(:no_proxy => true)
-    file = build_file :name => "render_reverse", :args => ["foobar"]
-    hoosegow.proxy_receive(file).should eq("raboof")
+    data = MessagePack.pack(["render_reverse", ["foobar"]])
+    result = hoosegow.proxy_receive(data)
+    MessagePack.unpack(result).should eq("raboof")
   end
 end
 

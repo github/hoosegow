@@ -1,11 +1,9 @@
-require 'hoosegow/serialize'
-require 'hoosegow/render'
-require 'hoosegow/docker'
-require 'json'
+require_relative 'hoosegow/render'
+require_relative 'hoosegow/docker'
+require 'msgpack'
 
 class Hoosegow
   include Render
-  include Serialize
 
   # Initialize a Hoosegow instance.
   #
@@ -35,18 +33,20 @@ class Hoosegow
   #
   # Returns the return value from the docker instance method.
   def proxy_send(name, args)
-    data = dump_method_call name, args
-    docker.run data
+    data = MessagePack.pack [name, args]
+    result = docker.run data
+    MessagePack.unpack(result)
   end
 
   # Receives proxied method call from the non-docker instance.
   #
-  # data - JSON hash specifying method name and arguments.
+  # pipe - The pipe that the method call will come in on.
   #
   # Returns the return value of the specified function.
   def proxy_receive(pipe)
-    data = read_method_call pipe
-    send data["name"], *data["args"]
+    name, args = MessagePack.unpack(pipe)
+    result = send name, *args
+    MessagePack.pack(result)
   end
 
   # Build a docker image from the Dockerfile in the root directory of the gem.
