@@ -28,7 +28,7 @@ def write_md5
 end
 
 desc "Benchmark render_reverse run in docker"
-task :benchmark => :bootstrap_if_changed do
+task :benchmark => [:load_deps, :bootstrap_if_changed] do
   hoosegow = Hoosegow.new CONFIG
 
   10.times do |i|
@@ -47,9 +47,13 @@ task :bootstrap_if_changed do
 end
 
 desc "Building docker image."
-task :bootstrap_docker do
-  deps_dir = File.expand_path File.join(__FILE__, '../spec/hoosegow_deps')
-  Hoosegow.load_deps deps_dir
+task :bootstrap_docker => :load_deps do
   Hoosegow.build_image CONFIG
   write_md5
+end
+
+desc "Load dependencies."
+task :load_deps do
+  deps_dir = File.expand_path File.join(__FILE__, '../spec/hoosegow_deps')
+  Hoosegow.load_deps deps_dir
 end
