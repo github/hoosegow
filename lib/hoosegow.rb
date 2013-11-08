@@ -32,7 +32,7 @@ class Hoosegow
     base = File.basename(@@deps_dir)
     data = MessagePack.pack [name, args, base]
     result = docker.run data
-    MessagePack.unpack(result)
+    MessagePack.unpack result
   end
 
   # Receives proxied method call from the non-docker instance.

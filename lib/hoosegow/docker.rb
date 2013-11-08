@@ -37,7 +37,7 @@ class Hoosegow
       start_container unless @id
 
       # Attach to container.
-      params  = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 1, :stream => 1}
+      params  = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 0, :stream => 1}
       request = Net::HTTP::Post.new uri(:attach, @id, params), HEADERS
       res     = transport_request request, data
 
@@ -51,7 +51,7 @@ class Hoosegow
       # Start a container for the next run.
       start_container
 
-      res
+      demux_streams res
     end
 
     # Public: Build a new image.
@@ -64,6 +64,18 @@ class Hoosegow
     end
 
     private
+    # Private: Docker multiplexes stdout/stderr over the same socket. This code
+    # demuxes it and returns the combined streams.
+    def demux_streams(input)
+      output = ""
+      until input.empty?
+        header = input.slice!(0,8)
+        stream_id, payload_length = header.unpack "L<L>"
+        output << input.slice!(0, payload_length)
+      end
+      output
+    end
+
     # Private: Create and start a Docker container.
     #
     # Returns nothing.
