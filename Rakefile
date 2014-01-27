@@ -1,11 +1,13 @@
-$LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__) + '/lib')
-require 'hoosegow'
+require_relative 'lib/hoosegow'
+
 require 'rspec/core/rake_task'
 
 begin
-	require File.expand_path(File.dirname(__FILE__) + '/config')
+	require_relative 'config'
 rescue LoadError
-	CONFIG = {}
+	CONFIG = {
+    :inmate_dir => File.join(File.dirname(__FILE__), 'spec', 'test_inmate')
+  }
 end
 
 RSpec::Core::RakeTask.new(:spec)
@@ -27,16 +29,19 @@ def write_md5
   File.write '.md5sum', directory_md5
 end
 
+def hoosegow
+  @hoosgow ||= Hoosegow.new CONFIG
+end
+
 desc "Benchmark render_reverse run in docker"
 task :benchmark => :bootstrap_if_changed do
-  hoosegow = Hoosegow.new CONFIG
-
   10.times do |i|
     sleep 0.5
     start = Time.now
     hoosegow.render_reverse "foobar"
     puts "render_reverse run ##{i} took #{Time.now - start} seconds"
   end
+  hoosegow.cleanup
 end
 
 desc "Bootstrap docker if the directory has changed since last bootstrap"
@@ -48,6 +53,6 @@ end
 
 desc "Building docker image."
 task :bootstrap_docker do
-  Hoosegow.new(CONFIG).build_image
+  hoosegow.build_image
   write_md5
 end

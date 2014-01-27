@@ -1,44 +1,48 @@
-require_relative 'hoosegow/render'
 require_relative 'hoosegow/docker'
+require_relative 'hoosegow/exceptions'
+
 require 'msgpack'
 
 class Hoosegow
-  include Render
-
-  # Initialize a Hoosegow instance.
+  # Public: Initialize a Hoosegow instance.
   #
   # options -
-  #           :no_proxy - Development mode. Use this if you don't want to setup
-  #                       docker on your development instance, but still need
-  #                       to test rendering files. This is how Hoosegow runs
-  #                       inside the docker instance.
-  #           :socket   - Path to Unix socket where Docker daemon is running.
-  #                       (optional. defaults to "/var/run/docker.sock")
-  #           :host     - IP or hostname where Docker daemon is running. Don't
-  #                       set this if Docker is listening locally on a Unix
-  #                       socket.
-  #           :port     - TCP port where Docker daemon is running. Don't set
-  #                       this if Docker is listening locally on a Unix socket.
+  #           :no_proxy   - Development mode. Use this if you don't want to
+  #                         setup Docker on your development instance, but
+  #                         still need to test rendering files. This is how
+  #                         Hoosegow runs inside the Docker container.
+  #           :inmate_dir - Dependency directory to be coppied to the hoosegow
+  #                         image. This should include a file called
+  #                         `inmate.rb` that defines a Hoosegow::Inmate module.
+  #           :socket     - Path to Unix socket where Docker daemon is running.
+  #                         (optional. defaults to "/var/run/docker.sock")
+  #           :host       - IP or hostname where Docker daemon is running.
+  #                         Don't set this if Docker is listening locally on a
+  #                         Unix socket.
+  #           :port       - TCP port where Docker daemon is running. Don't set
+  #                         this if Docker is listening locally on a Unix
+  #                         socket.
   def initialize(options = {})
-    return if @no_proxy = options[:no_proxy]
-    @docker_options = {:host => options[:host],
-                       :port => options[:port],
-                       :socket => options[:socket]}
+    options = options.dup
+    @no_proxy = options.delete(:no_proxy)
+    @inmate_dir  = options.delete(:inmate_dir) || '/hoosegow/inmate'
+    @docker_options = options
+    load_inmate_methods
   end
 
-  # Proxies method call to instance running in a docker container.
+  # Public: Proxies method call to instance running in a Docker container.
   #
-  # name - The method to call in the docker instance.
-  # args - Arguments that should be passed to the docker instance method.
+  # name - The method to call in the Docker instance.
+  # args - Arguments that should be passed to the Docker instance method.
   #
-  # Returns the return value from the docker instance method.
+  # Returns the return value from the Docker instance method.
   def proxy_send(name, args)
     data = MessagePack.pack [name, args]
     result = docker.run data
-    MessagePack.unpack(result)
+    MessagePack.unpack result
   end
 
-  # Receives proxied method call from the non-docker instance.
+  # Public: Receives proxied method call from the non-Docker instance.
   #
   # pipe - The pipe that the method call will come in on.
   #
@@ -49,23 +53,92 @@ class Hoosegow
     MessagePack.pack(result)
   end
 
-  # Build a docker image from the Dockerfile in the root directory of the gem.
+  # Public: Build a Docker image from the Dockerfile in the root directory of
+  # the gem.
   #
-  # Returns build output text.
+  # Returns build output text. Raises ImageBuildError if there is a problem.
   def build_image
-    base_dir = File.expand_path(File.dirname(__FILE__) + '/..')
-    tar = `tar -cC #{base_dir} .`
-    docker.build tar
+    # Don't want to have to require these in the container.
+    require 'tmpdir'
+    require 'fileutils'
+    require 'open3'
+
+    Dir.mktmpdir do |tmpdir|
+      # Copy Hoosegow gem to tmpdir
+      hoosegow_dir = File.expand_path(File.dirname(__FILE__) + '/..')
+      hoosegow_files = Dir[ File.join(hoosegow_dir, '*') ]
+      FileUtils.cp_r hoosegow_files, tmpdir
+
+      # Copy inmate files to the `inmate` dir.
+      if @inmate_dir
+        tmp_inmate = FileUtils.mkdir(File.join(tmpdir, 'inmate'))[0]
+        inmate_files = Dir[ File.join(@inmate_dir, '*') ]
+        FileUtils.cp_r inmate_files, tmp_inmate
+      end
+
+      # Create tarball of the tmpdir.
+      _, stdout, stderr, _ = Open3.popen3 'tar', '-c', '-C', tmpdir, '.'
+
+      errors = stderr.read
+      raise Hoosegow::ImageBuildError(errors) unless errors.empty?
+
+      # Build an image from the tarball.
+      docker.build stdout.read
+    end
+  end
+
+  # Public: Load inmate methods from #{inmate_dir}/inmate.rb and hook them up
+  # to proxied to the Docker container. If we are in the container, the methods
+  # are loaded and setup to be called directly.
+  #
+  # Returns nothing. Raises InmateImportError if there is a problem.
+  def load_inmate_methods
+    inmate_file = File.join @inmate_dir, 'inmate.rb'
+
+    unless File.exist?(inmate_file)
+      raise Hoosegow::InmateImportError "inmate file doesn't exist"
+    end
+
+    require inmate_file
+
+    unless Hoosegow.const_defined?(:Inmate) && Hoosegow::Inmate.is_a?(Module)
+      raise Hoosegow::InmateImportError \
+        "inmate file doesn't define Hoosegow::Inmate"
+    end
+
+    if no_proxy?
+      self.extend Hoosegow::Inmate
+    else
+      inmate_methods = Hoosegow::Inmate.instance_methods
+      inmate_methods.each do |name|
+        define_singleton_method name do |*args|
+          proxy_send name, args
+        end
+      end
+    end
+  end
+
+  # Public: We create/start a container after every run to reduce latency. This
+  # needs to be called before the process ends to cleanup that remaining
+  # container.
+  #
+  # Returns nothing.
+  def cleanup
+    docker.cleanup
   end
 
   private
-  # Docker instance.
+  # Private: Get or create a Docker instance.
+  #
+  # Returns an Docker instance.
   def docker
     @docker ||= Docker.new @docker_options
   end
 
-  # Returns true if we are in the docker instance or are in develpment mode.
+  # Returns true if we are in the Docker instance or are in develpment mode.
+  #
+  # Returns true/false.
   def no_proxy?
-    @no_proxy == true
+    !!@no_proxy
   end
 end

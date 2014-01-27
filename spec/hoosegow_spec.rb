@@ -7,11 +7,7 @@ rescue LoadError
   CONFIG = {}
 end
 
-class Hoosegow
-  def render_foobar
-    "foobar"
-  end
-end
+CONFIG.merge! :inmate_dir => File.join(File.dirname(__FILE__), 'test_inmate')
 
 describe Hoosegow, "#proxy_receive" do
   it "calls appropriate render method" do
@@ -26,6 +22,7 @@ describe Hoosegow, "#proxy_send" do
   it "calls appropriate render method via proxy" do
     hoosegow = Hoosegow.new CONFIG
     hoosegow.proxy_send("render_reverse",["foobar"]).should eq("raboof")
+    hoosegow.cleanup
   end
 end
 
@@ -40,10 +37,6 @@ describe Hoosegow, "render_*" do
     hoosegow = Hoosegow.new CONFIG
     hoosegow.stub :proxy_send => "not raboof"
     hoosegow.render_reverse("foobar").should eq("not raboof")
-  end
-
-  it "can be monkey patched" do
-    hoosegow = Hoosegow.new CONFIG
-    hoosegow.render_foobar.should eq("foobar")
+    hoosegow.cleanup
   end
 end
