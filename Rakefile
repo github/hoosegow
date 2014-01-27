@@ -1,10 +1,13 @@
 require_relative 'lib/hoosegow'
+
 require 'rspec/core/rake_task'
 
 begin
 	require_relative 'config'
 rescue LoadError
-	CONFIG = {}
+	CONFIG = {
+    :inmate_dir => File.join(File.dirname(__FILE__), 'spec', 'test_inmate')
+  }
 end
 
 RSpec::Core::RakeTask.new(:spec)
@@ -26,16 +29,19 @@ def write_md5
   File.write '.md5sum', directory_md5
 end
 
-desc "Benchmark render_reverse run in docker"
-task :benchmark => [:load_deps, :bootstrap_if_changed] do
-  hoosegow = Hoosegow.new CONFIG
+def hoosegow
+  @hoosgow ||= Hoosegow.new CONFIG
+end
 
+desc "Benchmark render_reverse run in docker"
+task :benchmark => :bootstrap_if_changed do
   10.times do |i|
     sleep 0.5
     start = Time.now
     hoosegow.render_reverse "foobar"
     puts "render_reverse run ##{i} took #{Time.now - start} seconds"
   end
+  hoosegow.cleanup
 end
 
 desc "Bootstrap docker if the directory has changed since last bootstrap"
@@ -46,13 +52,7 @@ task :bootstrap_if_changed do
 end
 
 desc "Building docker image."
-task :bootstrap_docker => :load_deps do
-  Hoosegow.build_image CONFIG
+task :bootstrap_docker do
+  hoosegow.build_image
   write_md5
-end
-
-desc "Load dependencies."
-task :load_deps do
-  deps_dir = File.expand_path File.join(__FILE__, '../spec/hoosegow_deps')
-  Hoosegow.load_deps deps_dir
 end

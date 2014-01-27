@@ -35,4 +35,4 @@ ADD . /hoosegow
 RUN /bin/bash -l -c 'bundle install'
 
 # Command to run when `docker run hoosegow`
-ENTRYPOINT ["/bin/bash", "-l", "-c", "bin/hoosegow"]
+ENTRYPOINT /bin/bash -l -c bin/hoosegow

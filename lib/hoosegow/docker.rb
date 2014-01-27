@@ -34,7 +34,7 @@ class Hoosegow
     # Returns the data from the container's stdout.
     def run(data)
       # Start a container if one isn't running yet.
-      start_container unless @id
+      start unless @id
 
       # Attach to container.
       params  = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 0, :stream => 1}
@@ -44,12 +44,11 @@ class Hoosegow
       # Wait for the container to finish
       post uri(:wait, @id)
 
-      # Delete the container
-      delete = Net::HTTP::Delete.new uri(:delete, @id), HEADERS
-      transport_request delete
+      # Delete the container.
+      delete
 
       # Start a container for the next run.
-      start_container
+      start
 
       demux_streams res
     end
@@ -63,23 +62,19 @@ class Hoosegow
       post uri(:build, :t => 'hoosegow'), tarfile
     end
 
-    private
-    # Private: Docker multiplexes stdout/stderr over the same socket. This code
-    # demuxes it and returns the combined streams.
-    def demux_streams(input)
-      output = ""
-      until input.empty?
-        header = input.slice!(0,8)
-        stream_id, payload_length = header.unpack "L<L>"
-        output << input.slice!(0, payload_length)
-      end
-      output
+    # Stop and kill the last container to be created. This needs to be run
+    # before the process ends or a container will keep running indefinitely.
+    def cleanup
+      stop
+      delete
     end
+
+    private
 
     # Private: Create and start a Docker container.
     #
     # Returns nothing.
-    def start_container
+    def start
       # Create container.
       create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => 'hoosegow'
       res         = post uri(:create), create_body
@@ -87,6 +82,23 @@ class Hoosegow
 
       # Start container
       post uri(:start, @id)
+    end
+
+    # Private: Stop the running container.
+    #
+    # Returns response body or nil if no container is running.
+    def stop
+      return unless @id
+      post uri(:stop, @id, :t => 0)
+    end
+
+    # Private: Delete the last started container.
+    #
+    # Returns response body or nil if no container was started.
+    def delete
+      return unless @id
+      delete = Net::HTTP::Delete.new uri(:delete, @id), HEADERS
+      transport_request delete
     end
 
     # Private: Send a POST request to the API.
@@ -135,11 +147,21 @@ class Hoosegow
       socket
     end
 
+    API_PATHS = {
+      :create => "/containers/create",
+      :attach => "/containers/%s/attach",
+      :start  => "/containers/%s/start",
+      :stop   => "/containers/%s/stop",
+      :wait   => "/containers/%s/wait",
+      :delete => "/containers/%s",
+      :build  => "/build"
+    }
+
     # Private: Build a URI for a given API endpount, encorporating any
     # arguments or parameters.
     #
     # endpoint - The Symbol name for an API endpoint (:create, :attach, :start,
-    #            :wait, :delete, :build).
+    #            :stop, :wait, :delete, :build).
     # *args    - Any arguments for building the URI (container ID). If the last
     #            argument is a hash, it will be used to populate the query
     #            portion of the URI.
@@ -147,15 +169,21 @@ class Hoosegow
     # Returns a URI string.
     def uri(endpoint, *args)
       query = URI.encode_www_form( args.last.is_a?(Hash) ? args.pop : {} )
-      path  = {:create => "/containers/create",
-               :attach => "/containers/%s/attach",
-               :start  => "/containers/%s/start",
-               :wait   => "/containers/%s/wait",
-               :delete => "/containers/%s",
-               :build  => "/build"}[endpoint]
-      path  = sprintf path, *args
+      path  = sprintf API_PATHS[endpoint], *args
 
       URI::HTTP.build(:path => path, :query => query).request_uri
+    end
+
+    # Private: Docker multiplexes stdout/stderr over the same socket. This code
+    # demuxes it and returns the combined streams.
+    def demux_streams(input)
+      output = ""
+      until input.empty?
+        header = input.slice!(0,8)
+        stream_id, payload_length = header.unpack "L<L>"
+        output << input.slice!(0, payload_length)
+      end
+      output
     end
   end
 end
