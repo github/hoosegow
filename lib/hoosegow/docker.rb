@@ -29,54 +29,29 @@ class Hoosegow
     # Public: Create and start a Docker container if one hasn't been started
     # already, then attach to it its stdin/stdout.
     #
-    # data - The data to pipe to the container's stdin.
+    # image    - The image to run.
+    # data     - The data to pipe to the container's stdin.
+    # prestart - Start another container after the this one finishes. Speeds up
+    #            wait between multiple runs. (Default true)
     #
     # Returns the data from the container's stdout.
-    def run(data)
-      # Start a container if one isn't running yet.
-      start unless @id
-
-      # Attach to container.
-      params  = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 0, :stream => 1}
-      request = Net::HTTP::Post.new uri(:attach, @id, params), HEADERS
-      res     = transport_request request, data
-
-      # Wait for the container to finish
-      post uri(:wait, @id)
-
-      # Delete the container.
-      delete
-
-      # Start a container for the next run.
-      start
-
-      demux_streams res
+    def run_container(image, data, prestart = true)
+      start_container(image) unless prestart && @id
+      res = attach_container data
+      wait_container
+      delete_container
+      start_container(image) if prestart
+      res
     end
 
-    # Public: Build a new image.
+    # Public: Create and start a Docker container.
     #
-    # tarfile - Tarred data for creating image. See http://docs.docker.io/en/latest/api/docker_remote_api_v1.5/#build-an-image-from-dockerfile-via-stdin
-    #
-    # Returns build results.
-    def build(tarfile)
-      post uri(:build, :t => 'hoosegow'), tarfile
-    end
-
-    # Stop and kill the last container to be created. This needs to be run
-    # before the process ends or a container will keep running indefinitely.
-    def cleanup
-      stop
-      delete
-    end
-
-    private
-
-    # Private: Create and start a Docker container.
+    # image_name - The name of the image to start the container with.
     #
     # Returns nothing.
-    def start
+    def start_container(image)
       # Create container.
-      create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => 'hoosegow'
+      create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => image
       res         = post uri(:create), create_body
       @id         = JSON.load(res)["Id"]
 
@@ -84,21 +59,69 @@ class Hoosegow
       post uri(:start, @id)
     end
 
-    # Private: Stop the running container.
+    # Attach to a container, writing data to container's STDIN.
+    #
+    # Returns combined STDOUT/STDERR from container.
+    def attach_container(data)
+      params  = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 0, :stream => 1}
+      request = Net::HTTP::Post.new uri(:attach, @id, params), HEADERS
+      res     = transport_request request, data
+      demux_streams res
+    end
+
+    # Public: Wait for a container to finish.
+    #
+    # Returns nothing.
+    def wait_container
+      post uri(:wait, @id)
+    end
+
+    # Public: Stop the running container.
     #
     # Returns response body or nil if no container is running.
-    def stop
+    def stop_container
       return unless @id
       post uri(:stop, @id, :t => 0)
     end
 
-    # Private: Delete the last started container.
+    # Public: Delete the last started container.
     #
     # Returns response body or nil if no container was started.
-    def delete
+    def delete_container
       return unless @id
       delete = Net::HTTP::Delete.new uri(:delete, @id), HEADERS
       transport_request delete
+    end
+
+    # Public: Build a new image.
+    #
+    # name    - The name to give the image.
+    # tarfile - Tarred data for creating image. See http://docs.docker.io/en/latest/api/docker_remote_api_v1.5/#build-an-image-from-dockerfile-via-stdin
+    #
+    # Returns build results.
+    def build_image(name, tarfile)
+      post uri(:build, :t => name), tarfile
+    end
+
+    # Get information about an image.
+    #
+    # name - The name of the image to get info about.
+    #
+    # Returns raw response string.
+    def inspect_image(name)
+      get uri(:inspect, name)
+    end
+
+  private
+
+    # Private: Send a GET request to the API.
+    #
+    # uri - API URI to GET to.
+    #
+    # Returns the response body.
+    def get(uri)
+      request = Net::HTTP::Get.new uri
+      transport_request request
     end
 
     # Private: Send a POST request to the API.
@@ -148,13 +171,14 @@ class Hoosegow
     end
 
     API_PATHS = {
-      :create => "/containers/create",
-      :attach => "/containers/%s/attach",
-      :start  => "/containers/%s/start",
-      :stop   => "/containers/%s/stop",
-      :wait   => "/containers/%s/wait",
-      :delete => "/containers/%s",
-      :build  => "/build"
+      :create  => "/containers/create",
+      :attach  => "/containers/%s/attach",
+      :start   => "/containers/%s/start",
+      :stop    => "/containers/%s/stop",
+      :wait    => "/containers/%s/wait",
+      :delete  => "/containers/%s",
+      :build   => "/build",
+      :inspect => "/images/%s/json"
     }
 
     # Private: Build a URI for a given API endpount, encorporating any
