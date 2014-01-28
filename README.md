@@ -1,88 +1,63 @@
 # Hoosegow
 
-A Docker jail for native rendering code.
+Ephemeral Docker jails for running untrusted Ruby code.
 
-## Install on Ubuntu 12.04
+Hoowgow runs both in your code and in a Docker container. When you call a method on a Hoosegow instance, it proxies the method call to another instance of Hoosegow running inside a docker container.
 
-#### 1. Install Docker
+#### Defining Methods to Proxy
 
-```bash
-sudo apt-get update
-sudo apt-get install linux-image-generic-lts-raring linux-headers-generic-lts-raring curl
-sudo reboot
+You need to define the methods you want to have run in the Docker container. To do this, you need to create a `inmate.rb` file that defines a `Hoosegow::Inmate` module. Any methods on this module will be available on `Hoosegow` instances and will be proxied to the Docker container. Here is an example `inmate.rb` file:
+
+```ruby
+class Hoosegow
+  module Inmate
+    def reverse(input)
+      input.reverse
+    end
+  end
+end
 ```
 
-**Go get a beer while Ubuntu reboots.**
+The `inmate.rb` file should be in its own folder, with an optional `Gemfile` to specify dependencies. This directory will be copied to the Docker container at build time so your methods are available to be proxied to. You specify the location of the directory containing the `inmate.rb` file when instantiating a `Hoosegow` object:
 
-```bash
-sudo sh -c "curl https://get.docker.io/gpg | apt-key add -"
-sudo sh -c "echo deb http://get.docker.io/ubuntu docker main > /etc/apt/sources.list.d/docker.list"
-sudo apt-get update
-sudo apt-get install lxc-docker
+```ruby
+hoosegow = Hoosegow.new :inmate_dir => File.join(RAILS_ROOT, "hoosegow_deps")
+hoosegow.reverse "foobar"
+#=> "raboof"
 ```
 
-#### 2. Build hoosegow image
+#### Building the Docker Image
 
-The Docker image is built when Hoosegow is initialized, but the first run can take a long time. You can get this run out of the way by running a rake task.
+Before you can start using Hoosegow, you need to build the Docker image that Hoosegow will proxy method calls to. This can be done in a rake task or bootstrap script:
 
-```bash
-rake bootstrap_docker
+```ruby
+hoosegow = Hoosegow.new :inmate_dir => File.join(RAILS_ROOT, "hoosegow_deps")
+hoosegow.build_image
+hoosegow.image_name
+#=> "hoosegow:2f8f155e72828ddab9bd8bd0e355c47fb01a5323"
 ```
 
-**Go get another beer while ruby builds.**
+The image will need to be rebuilt with any changes to Hoosegow or the `inmate.rb` file. If the image is built ahead of time (by a rake task or bootstrap script), you can pass the name of the image to use when instantiating a Hoosegow instance:
 
-#### 3. Run tests
-
-```bash
-rake spec
+```ruby
+ENV['HOOSEGOW_IMAGE']
+#=> "hoosegow:2f8f155e72828ddab9bd8bd0e355c47fb01a5323"
+hoosegow = Hoosegow.new :inmate_dir => File.join(RAILS_ROOT, "hoosegow_deps")
+                        :image_name => ENV['HOOSEGOW_IMAGE']
 ```
 
-## Usage
-
-Hoowgow runs both in your code and in a Docker container. When you call `render_*` on a Hoosegow instance, it proxies the method call to another instance of Hoosegow running inside a docker container.
-
-#### Connecting to Docker
+#### Configuring the Connection to Docker
 
 By default Docker's API listens locally on a Unix socket. If you are running Docker with it's default configuration, you don't need to worry about configuring Hoosegow.
 
 **Configure Hoosegow to connect to a non-standard Unix socket.**
 
 ```ruby
-h = Hoosegow.new :socket => '/path/to/socket'
-h.render_reverse 'foobar'
-# => "raboof"
+Hoosegow.new :socket => '/path/to/socket'
 ```
 
 **Configure Hoosegow to connect to a Docker daemon running on another computer.**
 
 ```ruby
-h = Hoosegow.new :host => '192.168.1.192', :port => 4243
-h.render_reverse 'foobar'
-# => "raboof"
-```
-
-#### Rendering a file
-
-To render a file, you call the `Hoosegow#render_#{type}` for any render function defined. This method call will be proxied to another Hoosegow instance running in a docker container.
-
-```ruby
-input    = "hello world!"
-output   = hoosegow.render_reverse input
-# => "!dlrow olleh"
-```
-
-## Extending
-
-Adding the ability to render a new file type is easy. Just add a new `render_#{type}` method to the `Hoosegow::Render` module in `lib/hoosegow/render/#{type}.rb`.
-
-```ruby
-# File: lib/hoosegow/render/join.rb
-
-class Hoosegow
-  module Render
-    def render_join(*args)
-      args.join "_"
-    end
-  end
-end
+Hoosegow.new :host => '192.168.1.192', :port => 4243
 ```

@@ -124,20 +124,20 @@ class Hoosegow
     docker.build_image image_name, tarball
   end
 
-  private
-  # Private: Get or create a Docker instance.
-  #
-  # Returns an Docker instance.
-  def docker
-    @docker ||= Docker.new @docker_options
-  end
-
   # Private: The name of the docker image to use. If not specified manually,
   # this will be infered from the hash of the tarball.
   #
   # Returns string image name.
   def image_name
     @image_name || (tarball && @image_name)
+  end
+
+  private
+  # Private: Get or create a Docker instance.
+  #
+  # Returns an Docker instance.
+  def docker
+    @docker ||= Docker.new @docker_options
   end
 
   # Tarball of this gem and the inmate file. Used for building an image.
