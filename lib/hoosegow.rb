@@ -74,13 +74,13 @@ class Hoosegow
     inmate_file = File.join @inmate_dir, 'inmate.rb'
 
     unless File.exist?(inmate_file)
-      raise Hoosegow::InmateImportError "inmate file doesn't exist"
+      raise Hoosegow::InmateImportError, "inmate file doesn't exist"
     end
 
     require inmate_file
 
     unless Hoosegow.const_defined?(:Inmate) && Hoosegow::Inmate.is_a?(Module)
-      raise Hoosegow::InmateImportError \
+      raise Hoosegow::InmateImportError,
         "inmate file doesn't define Hoosegow::Inmate"
     end
 
@@ -172,12 +172,11 @@ class Hoosegow
       @image_name = "hoosegow:#{digest.hexdigest}"
 
       # Create tarball of the tmpdir.
-      _, stdout, stderr, _ = Open3.popen3 'tar', '-c', '-C', tmpdir, '.'
+      stdout, stderr, status = Open3.capture3 'tar', '-c', '-C', tmpdir, '.'
 
-      errors = stderr.read
-      raise Hoosegow::ImageBuildError(errors) unless errors.empty?
+      raise Hoosegow::ImageBuildError, stderr unless stderr.empty?
 
-      @tarball = stdout.read
+      @tarball = stdout
     end
   end
 
