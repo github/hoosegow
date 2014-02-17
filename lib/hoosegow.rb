@@ -172,12 +172,11 @@ class Hoosegow
       @image_name = "hoosegow:#{digest.hexdigest}"
 
       # Create tarball of the tmpdir.
-      _, stdout, stderr, _ = Open3.popen3 'tar', '-c', '-C', tmpdir, '.'
+      stdout, stderr, status = Open3.capture3 'tar', '-c', '-C', tmpdir, '.'
 
-      errors = stderr.read
       raise Hoosegow::ImageBuildError, stderr unless stderr.empty?
 
-      @tarball = stdout.read
+      @tarball = stdout
     end
   end
 
