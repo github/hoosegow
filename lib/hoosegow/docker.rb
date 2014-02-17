@@ -3,6 +3,8 @@ require 'socket'
 require 'json'
 require 'uri'
 
+require_relative 'exceptions'
+
 class Hoosegow
   # Minimal API client for Docker, allowing attaching to container
   # stdin/stdout/stderr.
@@ -100,8 +102,14 @@ class Hoosegow
     #
     # Returns build results.
     def build_image(name, tarfile)
+      error = nil
       post uri(:build, :t => name), tarfile do |json|
-        yield JSON.load(json) if block_given?
+        data = JSON.load(json)
+        error = data if data['error']
+        yield data if block_given?
+      end
+      if error
+        raise Hoosegow::ImageBuildError, error['message']
       end
     end
 
