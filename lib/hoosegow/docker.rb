@@ -158,14 +158,14 @@ class Hoosegow
       end while response.kind_of?(Net::HTTPContinue)
 
       socket.write(data) if data
-      body = ''
       response.reading_body(socket, request.response_body_permitted?) do
-        response.read_body do |segment|
-	  body << segment
-	  yield segment if block_given?
-	end
+        if block_given?
+          response.read_body do |segment|
+            yield segment
+          end
+        end
       end
-      body
+      response.body
     end
 
     # Private: Create a connection to API host or local Unix socket.
