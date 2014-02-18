@@ -17,6 +17,7 @@ class Hoosegow
     #           :port   - TCP port to connect to (unless using Unix socket).
     #           :socket - Path to local Unix socket (unless using host and
     #                     port).
+    #           :prestart - Start a new container after each `run_container` call.
     def initialize(options = {})
       if options[:host] || options[:port]
         @host   = options[:host] || "127.0.0.1"
@@ -24,6 +25,7 @@ class Hoosegow
       else
         @socket_path = options[:socket] || "/var/run/docker.sock"
       end
+      @prestart = options.fetch(:prestart, true)
     end
 
     # Public: Create and start a Docker container if one hasn't been started
@@ -31,16 +33,14 @@ class Hoosegow
     #
     # image    - The image to run.
     # data     - The data to pipe to the container's stdin.
-    # prestart - Start another container after the this one finishes. Speeds up
-    #            wait between multiple runs. (Default true)
     #
     # Returns the data from the container's stdout.
-    def run_container(image, data, prestart = true)
-      start_container(image) unless prestart && @id
+    def run_container(image, data)
+      start_container(image) unless @prestart && @id
       res = attach_container data
       wait_container
       delete_container
-      start_container(image) if prestart
+      start_container(image) if @prestart
       res
     end
 
