@@ -1,5 +1,6 @@
 require_relative 'hoosegow/docker'
 require_relative 'hoosegow/exceptions'
+require_relative 'hoosegow/image_bundle'
 
 require 'msgpack'
 
@@ -40,6 +41,15 @@ class Hoosegow
       require 'open3'
       require 'digest'
     end
+  end
+
+  # Public: The thing that defines which files go into the docker image tarball.
+  def image_bundle
+    @image_bundle ||=
+      Hoosegow::ImageBundle.new.tap do |image|
+        image.add(File.expand_path('../../*', __FILE__), :ignore_hidden => true)
+        image.add(File.join(@inmate_dir, "*"), :prefix => 'inmate')
+      end
   end
 
   # Public: Proxies method call to instance running in a Docker container.
@@ -121,7 +131,7 @@ class Hoosegow
   #
   # Returns build output text. Raises ImageBuildError if there is a problem.
   def build_image(&block)
-    docker.build_image image_name, tarball, &block
+    docker.build_image image_name, image_bundle.tarball, &block
   end
 
   # Private: The name of the docker image to use. If not specified manually,
@@ -129,7 +139,7 @@ class Hoosegow
   #
   # Returns string image name.
   def image_name
-    @image_name || (tarball && @image_name)
+    @image_name || image_bundle.image_name
   end
 
   private
@@ -138,46 +148,6 @@ class Hoosegow
   # Returns an Docker instance.
   def docker
     @docker ||= Docker.new @docker_options
-  end
-
-  # Tarball of this gem and the inmate file. Used for building an image.
-  #
-  # Returns string tarball.
-  def tarball
-    return @tarball if defined? @tarball
-
-    Dir.mktmpdir do |tmpdir|
-      # Copy Hoosegow gem to tmpdir
-      hoosegow_dir = File.expand_path(File.dirname(__FILE__) + '/..')
-      hoosegow_files = Dir[ File.join(hoosegow_dir, '*') ]
-      hoosegow_files.select! { |f| !f.start_with? '.' }
-      FileUtils.cp_r hoosegow_files, tmpdir
-
-      # Copy inmate files to the `inmate` dir.
-      if @inmate_dir
-        tmp_inmate = FileUtils.mkdir(File.join(tmpdir, 'inmate'))[0]
-        inmate_files = Dir[ File.join(@inmate_dir, '*') ]
-        FileUtils.cp_r inmate_files, tmp_inmate
-      end
-
-      # Find hash of all files we're sending over.
-      digest = Digest::SHA1.new
-      Dir[File.join(tmpdir, '**/*')].each do |path|
-        if File.file? path
-          open path, 'r' do |file|
-            digest.update file.read
-          end
-        end
-      end
-      @image_name = "hoosegow:#{digest.hexdigest}"
-
-      # Create tarball of the tmpdir.
-      stdout, stderr, status = Open3.capture3 'tar', '-c', '-C', tmpdir, '.'
-
-      raise Hoosegow::ImageBuildError, stderr unless stderr.empty?
-
-      @tarball = stdout
-    end
   end
 
   # Returns true if we are in the Docker instance or are in develpment mode.
