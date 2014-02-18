@@ -3,6 +3,8 @@ require 'socket'
 require 'json'
 require 'uri'
 
+require_relative 'exceptions'
+
 class Hoosegow
   # Minimal API client for Docker, allowing attaching to container
   # stdin/stdout/stderr.
@@ -100,7 +102,11 @@ class Hoosegow
     #
     # Returns build results.
     def build_image(name, tarfile)
-      post uri(:build, :t => name), tarfile
+      post uri(:build, :t => name), tarfile do |json|
+        data = JSON.load(json)
+        raise Hoosegow::ImageBuildError.new(data) if data['error']
+        yield data if block_given?
+      end
     end
 
     # Get information about an image.
@@ -130,10 +136,10 @@ class Hoosegow
     # data   - Data for POST body.
     #
     # Returns the response body.
-    def post(uri, data = '{}')
+    def post(uri, data = '{}', &block)
       request = Net::HTTP::Post.new uri, HEADERS
       request.body = data
-      transport_request request
+      transport_request request, &block
     end
 
     # Private: Connects to API host or local socket, transmits the request, and
@@ -152,8 +158,14 @@ class Hoosegow
       end while response.kind_of?(Net::HTTPContinue)
 
       socket.write(data) if data
-      response.reading_body(socket, request.response_body_permitted?) { }
-      response.body
+      body = ''
+      response.reading_body(socket, request.response_body_permitted?) do
+        response.read_body do |segment|
+	  body << segment
+	  yield segment if block_given?
+	end
+      end
+      body
     end
 
     # Private: Create a connection to API host or local Unix socket.
