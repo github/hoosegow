@@ -4,18 +4,19 @@ class Hoosegow
 
   # Errors while building the Docker image.
   class ImageBuildError < Error
-    def initialize(message_or_docker_build_hash)
-      if message_or_docker_build_hash.is_a?(Hash)
-        @status = message_or_docker_build_hash
-        message = @status['message']
-      else
-        message = message_or_docker_build_hash
+    def initialize(message)
+      if message.is_a?(Hash)
+        @detail = message['errorDetail']
+        message = message['error']
       end
       super(message)
     end
 
-    # The full error message from docker.
-    attr_reader :status
+    # The error details from docker.
+    #
+    # Example:
+    #     {"code" => 127, "message" => "The command [/bin/sh -c boom] returned a non-zero code: 127"}
+    attr_reader :detail
   end
 
   # Errors while importing dependencies
