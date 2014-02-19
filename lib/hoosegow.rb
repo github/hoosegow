@@ -57,6 +57,9 @@ class Hoosegow
   #
   # name - The method to call in the Docker instance.
   # args - Arguments that should be passed to the Docker instance method.
+  # block - A block that can be yielded to.
+  #
+  # See docs/dispatch.md for more information.
   #
   # Returns the return value from the Docker instance method.
   def proxy_send(name, args, &block)

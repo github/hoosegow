@@ -1,6 +1,7 @@
 require 'msgpack'
 
 class Hoosegow
+  # See docs/dispatch.md for more information.
   module Protocol
     # Sends data to and from an inmate, via a Docker container running `bin/hoosegow`.
     class Proxy

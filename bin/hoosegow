@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# See docs/dispatch.md for more information.
 
 docker_entry_point = ARGV.first != 'client'
 
