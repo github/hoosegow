@@ -72,6 +72,12 @@ describe Hoosegow::Protocol::Proxy do
     stderr.should_receive(:write).with('abc')
     proxy.receive(docker_stderr('abc'))
   end
+  it "decodes the return value, across several reads" do
+    docker_stdout(MessagePack.pack([:return, :abcdefghijklmn])).each_char do |char|
+      proxy.receive(char)
+    end
+    expect(proxy.return_value).to eq('abcdefghijklmn')
+  end
   def docker_stdout(data)
     docker_data(1, data)
   end
