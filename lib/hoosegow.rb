@@ -1,6 +1,7 @@
 require_relative 'hoosegow/docker'
 require_relative 'hoosegow/exceptions'
 require_relative 'hoosegow/image_bundle'
+require_relative 'hoosegow/protocol'
 
 require 'msgpack'
 

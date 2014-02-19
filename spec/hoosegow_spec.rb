@@ -44,7 +44,7 @@ end
 
 describe Hoosegow::Protocol::Inmate do
   it "calls appropriate render method" do
-    inmate = stub('inmate')
+    inmate = double('inmate')
     inmate.should_receive(:render).with('foobar').
       and_yield(:a, 1).
       and_yield(:b, 2, 3).
@@ -54,5 +54,15 @@ describe Hoosegow::Protocol::Inmate do
     sidechannel.set_encoding('BINARY')
     Hoosegow::Protocol::Inmate.new(:inmate => inmate, :stdin => stdin, :sidechannel => sidechannel).run!
     expect(sidechannel.string).to eq( MessagePack.pack([:yield, [:a, 1]]) + MessagePack.pack([:yield, [:b, 2, 3]]) + MessagePack.pack([:return, 'raboof']) )
+  end
+
+  it "encodes exceptions" do
+    inmate = double('inmate')
+    inmate.should_receive(:render).with('foobar').and_raise('boom')
+    stdin = StringIO.new(MessagePack.pack(['render', ['foobar']]))
+    sidechannel = StringIO.new
+    sidechannel.set_encoding('BINARY')
+    Hoosegow::Protocol::Inmate.new(:inmate => inmate, :stdin => stdin, :sidechannel => sidechannel).run!
+    expect(sidechannel.string).to eq( MessagePack.pack([:raise, {:class => 'RuntimeError', :message => 'boom'}]) )
   end
 end

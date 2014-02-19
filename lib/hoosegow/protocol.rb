@@ -25,7 +25,7 @@ class Hoosegow
         end
         report(:return, result)
       rescue => e
-        report(:raise, result)
+        report(:raise, {:class => e.class.name, :message => e.message})
       end
 
       private
