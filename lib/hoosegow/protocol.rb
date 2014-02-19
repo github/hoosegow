@@ -3,6 +3,8 @@ require 'msgpack'
 class Hoosegow
   # See docs/dispatch.md for more information.
   module Protocol
+    # Hoosegow, on the app side of the proxy.
+    #
     # Sends data to and from an inmate, via a Docker container running `bin/hoosegow`.
     class Proxy
       # Options:
@@ -57,6 +59,8 @@ class Hoosegow
       end
     end
 
+    # bin/hoosegow
+    #
     # Translates output (STDOUT, yields, and return value) from an inner invocation
     # of `bin/hoosegow` into a single `STDOUT` stream.
     class EntryPoint
@@ -129,6 +133,8 @@ class Hoosegow
       end
     end
 
+    # bin/hoosegow client (where the inmate code runs)
+    #
     # Translates stdin into a method call on on inmate.
     # Encodes yields and the return value onto a stream.
     class Inmate
@@ -146,6 +152,7 @@ class Hoosegow
         name, args = MessagePack.unpack(@stdin.read)
         result = @inmate.send(name, *args) do |*yielded|
           report(:yield, yielded)
+          nil # Don't return anything from the inmate's `yield`.
         end
         report(:return, result)
       rescue => e
