@@ -42,6 +42,36 @@ describe Hoosegow, "render_*" do
 end
 
 
+describe Hoosegow::Protocol::EntryPoint do
+  it "combines a sidechannel and stdout" do
+    sidechannel = IO.pipe
+    inmate_stdout = IO.pipe
+    result = StringIO.new
+    result.set_encoding('BINARY')
+
+    protocol = Hoosegow::Protocol::EntryPoint.new(:stdout => result, :inmate_stdout => inmate_stdout[0], :sidechannel => sidechannel[0])
+    protocol.start!
+
+    sidechannel_data = MessagePack.pack("raw-data-from-sidechannel")
+    sidechannel_data1 = sidechannel_data[0..5]
+    sidechannel_data2 = sidechannel_data[6..-1]
+
+    inmate_stdout[1].write "stdout 1\n"
+    sleep 0.01
+    sidechannel[1].write MessagePack.pack('a') + sidechannel_data1
+    sleep 0.01
+    inmate_stdout[1].write "stdout 2"
+    sleep 0.01
+    sidechannel[1].write sidechannel_data2
+    sleep 0.01
+    inmate_stdout[1].write "stdout 3"
+
+    protocol.finish!
+
+    expect(result.string).to eq( MessagePack.pack([:stdout, "stdout 1\n"]) + MessagePack.pack('a') + MessagePack.pack([:stdout, "stdout 2"]) + sidechannel_data + MessagePack.pack([:stdout, "stdout 3"]) )
+  end
+end
+
 describe Hoosegow::Protocol::Inmate do
   it "calls appropriate render method" do
     inmate = double('inmate')
