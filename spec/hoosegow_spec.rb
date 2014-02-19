@@ -65,6 +65,8 @@ describe Hoosegow::Protocol::EntryPoint do
     sidechannel[1].write sidechannel_data2
     sleep 0.01
     inmate_stdout[1].write "stdout 3"
+    sleep 0.01
+    inmate_stdout[1].close
 
     protocol.finish!
 

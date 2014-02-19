@@ -26,20 +26,26 @@ class Hoosegow
       private
 
       def run_loop
+        ios = [@inmate_stdout, @sidechannel]
         loop do
-          readers, _, _ = IO.select([@inmate_stdout, @sidechannel], nil, nil, 1)
+          readers, _, _ = IO.select(ios, nil, nil, 1)
           if readers.nil?
             break if @stop
           else
             readers.each do |r|
-              if r == @sidechannel
-                read_sidechannel
-              else
-                read_stdout
+              begin
+                if r == @sidechannel
+                  read_sidechannel
+                else
+                  read_stdout
+                end
+              rescue EOFError
+                # stream was closed.
+                ios.delete(r)
               end
             end
           end
-            break if @stop
+          break if ios.empty?
         end
       end
 
