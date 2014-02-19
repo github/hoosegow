@@ -36,6 +36,8 @@ class Hoosegow
                 @yield_block.call(*inmate_value) if @yield_block
               when 'return'
                 @return_value = inmate_value
+              when 'raise'
+                raise Hoosegow::InmateRuntimeError, "#{inmate_value['class']}: #{inmate_value['message']}"
               when 'stdout'
                 @stdout.write(inmate_value)
               end

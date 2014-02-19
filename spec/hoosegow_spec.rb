@@ -64,6 +64,9 @@ describe Hoosegow::Protocol::Proxy do
     proxy.receive(docker_stdout(MessagePack.pack([:return, 1])))
     expect(proxy.return_value).to eq(1)
   end
+  it "decodes an error" do
+    expect { proxy.receive(docker_stdout(MessagePack.pack([:raise, {:class => 'SomeInternalError', :message => 'I went boom'}]))) }.to raise_error(Hoosegow::InmateRuntimeError, "SomeInternalError: I went boom")
+  end
   it "decodes stdout" do
     stdout.should_receive(:write).with('abc')
     proxy.receive(docker_stdout(MessagePack.pack([:stdout, 'abc'])))
