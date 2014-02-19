@@ -2,6 +2,42 @@ class Hoosegow
   module Protocol
     # Sends data to and from an inmate, via a Docker container running `bin/hoosegow`.
     class Proxy
+      def initialize(options)
+        @yield_block = options.fetch(:yield)
+        @stdout      = options.fetch(:stdout)
+        @stderr      = options.fetch(:stderr)
+      end
+
+      # Encodes a "send" method call for an inmate.
+      def encode_send(method_name, args)
+        MessagePack.pack([method_name, args])
+      end
+
+      # The return value
+      attr_reader :return_value
+
+      # Decodes a message from an inmate via docker.
+      def receive(data)
+        header = data.slice!(0,8)
+        docker_type, length = header.unpack('CxxxN')
+        docker_message = data.slice!(0, length)
+        if docker_type == 1
+          @unpacker ||= MessagePack::Unpacker.new
+          @unpacker.feed_each(docker_message) do |decoded|
+            inmate_type, inmate_value = decoded
+            case inmate_type.to_s
+            when 'yield'
+              @yield_block.call(*inmate_value) if @yield_block
+            when 'return'
+              @return_value = inmate_value
+            when 'stdout'
+              @stdout.write(inmate_value)
+            end
+          end
+        elsif docker_type == 2
+          @stderr.write(docker_message)
+        end
+      end
     end
 
     # Translates output (STDOUT, yields, and return value) from an inner invocation

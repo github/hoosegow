@@ -42,6 +42,47 @@ describe Hoosegow, "render_*" do
 end
 
 
+describe Hoosegow::Protocol::Proxy do
+  subject(:proxy) { Hoosegow::Protocol::Proxy.new(:yield => block, :stdout => stdout, :stderr => stderr) }
+  let(:block) { double('block') }
+  let(:stdout) { double('stdout') }
+  let(:stderr) { double('stderr') }
+  it "encodes the method call" do
+    expect(MessagePack.unpack(proxy.encode_send(:method_name, ["arg1", {:name => 'value'}]))).to eq(['method_name', ["arg1", {'name' => 'value'}]])
+  end
+  it "decodes a yield" do
+    block.should_receive(:call).with('a', 'b')
+    proxy.receive(docker_stdout(MessagePack.pack([:yield, ['a', 'b']])))
+  end
+  context 'with no block' do
+    let(:block) { nil }
+    it "decodes a yield" do
+      proxy.receive(docker_stdout(MessagePack.pack([:yield, ['a', 'b']])))
+    end
+  end
+  it "decodes the return value" do
+    proxy.receive(docker_stdout(MessagePack.pack([:return, 1])))
+    expect(proxy.return_value).to eq(1)
+  end
+  it "decodes stdout" do
+    stdout.should_receive(:write).with('abc')
+    proxy.receive(docker_stdout(MessagePack.pack([:stdout, 'abc'])))
+  end
+  it "decodes stderr" do
+    stderr.should_receive(:write).with('abc')
+    proxy.receive(docker_stderr('abc'))
+  end
+  def docker_stdout(data)
+    docker_data(1, data)
+  end
+  def docker_stderr(data)
+    docker_data(2, data)
+  end
+  def docker_data(type, data)
+    [type, data.bytesize].pack('CxxxN') + data
+  end
+end
+
 describe Hoosegow::Protocol::EntryPoint do
   it "combines a sidechannel and stdout" do
     sidechannel = IO.pipe
