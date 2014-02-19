@@ -7,6 +7,7 @@ Calling a method on an inmate involves passing information through several layer
 * **bin/hoosegow** - This is the script that receives `STDIN` and produces `STDOUT` and `STDERR`.
 * **Inmate** - Inside the docker container, the inmate code receives a method call.
 
+```
  Proxy                  Docker        bin/hoosegow(1)     bin/hoosegow(2)              Inmate
 
    |                      |                 |                   |                        |
@@ -32,6 +33,7 @@ Calling a method on an inmate involves passing information through several layer
    | multiplex(stdout,    |   callbacks,    |                   |                        |
    |   stderr)            |   result)       |                   |                        |
    |                      |                 |                   |                        |
+```
 
 ## Interfaces
 
