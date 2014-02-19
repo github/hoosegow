@@ -41,7 +41,7 @@ def try(hoosegow, method, *args, &block)
   p :result => result
 rescue => error
   p :error => error
-  puts error.backtrace
+  #puts error.backtrace
 end
 
 def each_hoosegow
@@ -67,6 +67,7 @@ class FakeDocker
   def run_container(image_name, input_data)
     Open3.popen3("./bin/hoosegow") do |stdin, stdout, stderr, wait_thr|
       stdin.write(input_data)
+      stdin.close
       ios = [stdout, stderr]
       while ios.any? do
         readers, _, _ = IO.select(ios, [], [], 1)

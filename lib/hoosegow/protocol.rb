@@ -1,11 +1,17 @@
+require 'msgpack'
+
 class Hoosegow
   module Protocol
     # Sends data to and from an inmate, via a Docker container running `bin/hoosegow`.
     class Proxy
+      # Options:
+      # * (optional) :yield - a block to call when the inmate yields
+      # * (optional) :stdout - an IO for writing STDOUT from the inmate
+      # * (optional) :stderr - an IO for writing STDERR from the inmate
       def initialize(options)
-        @yield_block = options.fetch(:yield)
-        @stdout      = options.fetch(:stdout)
-        @stderr      = options.fetch(:stderr)
+        @yield_block = options.fetch(:yield, nil)
+        @stdout      = options.fetch(:stdout, $stdout)
+        @stderr      = options.fetch(:stderr, $stderr)
       end
 
       # Encodes a "send" method call for an inmate.
@@ -53,10 +59,25 @@ class Hoosegow
     # Translates output (STDOUT, yields, and return value) from an inner invocation
     # of `bin/hoosegow` into a single `STDOUT` stream.
     class EntryPoint
+      # Options
+      # * :inmate_stdout - where to receive normal stdout from the inmate
+      # * :sidechannel - where to receive the sidechannel from the inmate
+      # * (optional) :stdout - where to write the encoded stream of [inmate_stdout, yield, return, raise]
       def initialize(options)
-        @stdout        = options.fetch(:stdout)
+        @stdout        = options.fetch(:stdout, $stdout)
         @inmate_stdout = options.fetch(:inmate_stdout)
         @sidechannel   = options.fetch(:sidechannel)
+      end
+
+      def self.start(options, &block)
+        new(options).start(&block)
+      end
+
+      def start
+        start!
+        yield
+      ensure
+        finish!
       end
 
       def start!
@@ -110,9 +131,13 @@ class Hoosegow
     # Translates stdin into a method call on on inmate.
     # Encodes yields and the return value onto a stream.
     class Inmate
+      # Options:
+      # * :sidechannel - the `IO` that we can write yield and return value to.
+      # * (optional) :inmate - the hoosegow instance to use as the inmate.
+      # * (optional) :stdin - where to read the encoded method call data.
       def initialize(options)
-        @inmate      = options.fetch(:inmate)
-        @stdin       = options.fetch(:stdin)
+        @inmate      = options.fetch(:inmate) { Hoosegow.new(:no_proxy => true) }
+        @stdin       = options.fetch(:stdin, $stdin)
         @sidechannel = options.fetch(:sidechannel)
       end
 

@@ -1,6 +1,22 @@
 #!/usr/bin/env ruby
 
-require_relative '../lib/hoosegow'
+docker_entry_point = ARGV.first != 'client'
 
-hoosegow = Hoosegow.new :no_proxy => true
-STDOUT.write hoosegow.proxy_receive STDIN
+HoosegowSidechannelFd = "HOOSEGOW_SIDECHANNEL_FD"
+
+if docker_entry_point
+  require_relative '../lib/hoosegow/protocol'
+  stdout = IO.pipe
+  sidechannel = IO.pipe
+  Hoosegow::Protocol::EntryPoint.start(:inmate_stdout => stdout[0], :sidechannel => sidechannel[0]) do
+    scfd = sidechannel[1].to_i
+    pid = spawn({HoosegowSidechannelFd => scfd.to_s}, $0, 'client', :out => stdout[1], scfd => scfd)
+    Process.waitpid(pid)
+  end
+else
+  require_relative '../lib/hoosegow'
+  $stdout.sync = true
+  $stderr.sync = true
+  protocol = Hoosegow::Protocol::Inmate.new(:sidechannel => IO.for_fd(ENV[HoosegowSidechannelFd].to_i))
+  protocol.run!
+end
