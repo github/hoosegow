@@ -102,7 +102,7 @@ class Hoosegow
     #
     # Returns build results.
     def build_image(name, tarfile)
-      post uri(:build, :t => name), tarfile do |json|
+      post uri(:build, :t => name, :rm => '1'), tarfile do |json|
         data = JSON.load(json)
         raise Hoosegow::ImageBuildError.new(data) if data['error']
         yield data if block_given?
