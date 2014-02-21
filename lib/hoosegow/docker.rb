@@ -39,10 +39,13 @@ class Hoosegow
     # Returns the data from the container's stdout.
     def run_container(image, data, &block)
       start_container(image) unless @prestart && @id
-      attach_container(data, &block)
-      wait_container
-      delete_container
-      start_container(image) if @prestart
+      begin
+        attach_container(data, &block)
+      ensure
+        wait_container
+        delete_container
+        start_container(image) if @prestart
+      end
       nil
     end
 
