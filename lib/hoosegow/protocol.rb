@@ -1,4 +1,5 @@
 require 'msgpack'
+require 'thread'
 
 class Hoosegow
   # See docs/dispatch.md for more information.
@@ -59,96 +60,32 @@ class Hoosegow
       end
     end
 
-    # bin/hoosegow
-    #
-    # Translates output (STDOUT, yields, and return value) from an inner invocation
-    # of `bin/hoosegow` into a single `STDOUT` stream.
-    class EntryPoint
-      # Options
-      # * :inmate_stdout - where to receive normal stdout from the inmate
-      # * :sidechannel - where to receive the sidechannel from the inmate
-      # * (optional) :stdout - where to write the encoded stream of [inmate_stdout, yield, return, raise]
-      def initialize(options)
-        @stdout        = options.fetch(:stdout, $stdout)
-        @inmate_stdout = options.fetch(:inmate_stdout)
-        @sidechannel   = options.fetch(:sidechannel)
-      end
-
-      def self.start(options, &block)
-        new(options).start(&block)
-      end
-
-      def start
-        start!
-        yield
-      ensure
-        finish!
-      end
-
-      def start!
-        @thread = Thread.new { run_loop }
-        self
-      end
-
-      def finish!
-        @stop = true
-        @thread.join
-      end
-
-      private
-
-      def run_loop
-        ios = [@inmate_stdout, @sidechannel]
-        loop do
-          readers, _, _ = IO.select(ios, nil, nil, 1)
-          if readers.nil?
-            break if @stop
-          else
-            readers.each do |r|
-              begin
-                if r == @sidechannel
-                  read_sidechannel
-                else
-                  read_stdout
-                end
-              rescue EOFError
-                # stream was closed.
-                ios.delete(r)
-              end
-            end
-          end
-          break if ios.empty?
-        end
-      end
-
-      def read_sidechannel
-        @unpacker ||= MessagePack::Unpacker.new
-        @unpacker.feed_each(@sidechannel.read_nonblock(100000)) do |obj|
-          @stdout.write(MessagePack.pack(obj))
-        end
-      end
-
-      def read_stdout
-        @stdout.write(MessagePack.pack([:stdout, @inmate_stdout.read_nonblock(100000)]))
-      end
-    end
-
     # bin/hoosegow client (where the inmate code runs)
     #
     # Translates stdin into a method call on on inmate.
     # Encodes yields and the return value onto a stream.
     class Inmate
+      def self.run(options)
+        o = new(options)
+        o.intercepting do
+          o.run
+        end
+      end
+
       # Options:
-      # * :sidechannel - the `IO` that we can write yield and return value to.
+      # * :stdout - real stdout, where we can write things that our parent process will see
+      # * :intercepted - where this process or child processes write STDOUT to
       # * (optional) :inmate - the hoosegow instance to use as the inmate.
       # * (optional) :stdin - where to read the encoded method call data.
       def initialize(options)
-        @inmate      = options.fetch(:inmate) { Hoosegow.new(:no_proxy => true) }
-        @stdin       = options.fetch(:stdin, $stdin)
-        @sidechannel = options.fetch(:sidechannel)
+        @inmate       = options.fetch(:inmate) { Hoosegow.new(:no_proxy => true) }
+        @stdin        = options.fetch(:stdin, $stdin)
+        @stdout       = options.fetch(:stdout)
+        @intercepted  = options.fetch(:intercepted)
+        @stdout_mutex = Mutex.new
       end
 
-      def run!
+      def run
         name, args = MessagePack::Unpacker.new(@stdin).read
         result = @inmate.send(name, *args) do |*yielded|
           report(:yield, yielded)
@@ -159,10 +96,39 @@ class Hoosegow
         report(:raise, {:class => e.class.name, :message => e.message})
       end
 
+      def intercepting
+        start_intercepting
+        yield
+      ensure
+        stop_intercepting
+      end
+
+      def start_intercepting
+        @intercepting = true
+        @intercept_thread = Thread.new do
+          begin
+            loop do
+              if IO.select([@intercepted], nil, nil, 0.1)
+                report(:stdout, @intercepted.read_nonblock(100000))
+              elsif ! @intercepting
+                break
+              end
+            end
+          rescue EOFError
+            # stdout is closed, so we can stop checking it.
+          end
+        end
+      end
+
+      def stop_intercepting
+        @intercepting = false
+        @intercept_thread.join
+      end
+
       private
 
       def report(type, data)
-        @sidechannel.write(MessagePack.pack([type, data]))
+        @stdout_mutex.synchronize { @stdout.write(MessagePack.pack([type, data])) }
       end
     end
   end

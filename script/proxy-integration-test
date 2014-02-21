@@ -17,6 +17,8 @@ class Hoosegow
   module Inmate
     def test_method(a, b)
       yield :ok if block_given?
+      system "echo stdout in a child process"
+      $stderr.puts "stderr in this process"
       raise b if a.to_s == 'raise'
       a + b
     end

@@ -8,31 +8,31 @@ Calling a method on an inmate involves passing information through several layer
 * **Inmate** - Inside the docker container, the inmate code receives a method call.
 
 ```
- Proxy                  Docker        bin/hoosegow(1)     bin/hoosegow(2)              Inmate
+ Proxy                  Docker        bin/hoosegow                 Inmate
 
-   |                      |                 |                   |                        |
-   | HTTP POST /attach    |                 |                   |                        |
-   |--------------------->|                 |                   |                        |
-   | msgpack(method,args) |---------------->|                   |                        |
-   |                      | stdin           |------------------>|                        |
-   |                      |                 | stdin             | send(method,args,&blk) |
-   |                      |                 |                   |----------------------->|
-   |                      |                 |                   |                        |
-   |                      |                 |                   |                        |
-   |                      |                 |                   |<-----------------------|
-   |                      |                 |                   | result,                |
-   |                      |                 |<------------------| blk.call(),            |
-   |                      |                 | stdout,           | stdout,                |
-   |                      |                 | stderr,           | stderr                 |
-   |                      |                 | sidechannel=      |                        |
-   |                      |                 |   encode(         |                        |
-   |                      |<----------------|     blk.call(),   |                        |
-   |                      | stderr,         |     result)       |                        |
-   | 200 OK               | stdout=encode(  |                   |                        |
-   |<---------------------|   stdout,       |                   |                        |
-   | multiplex(stdout,    |   callbacks,    |                   |                        |
-   |   stderr)            |   result)       |                   |                        |
-   |                      |                 |                   |                        |
+   |                      |                 |                        |
+   | HTTP POST /attach    |                 |                        |
+   |--------------------->|                 |                        |
+   | msgpack(method,args) |---------------->|                        |
+   |                      | stdin           |                        |
+   |                      |                 | send(method,args,&blk) |
+   |                      |                 |----------------------->|
+   |                      |                 |                        |
+   |                      |                 |                        |
+   |                      |                 |<-----------------------|
+   |                      |                 | result,                |
+   |                      |                 | blk.call(),            |
+   |                      |                 | stdout,                |
+   |                      |                 | stderr                 |
+   |                      |                 |                        |
+   |                      |                 |                        |
+   |                      |<----------------|                        |
+   |                      | stderr,         |                        |
+   | 200 OK               | stdout=encode(  |                        |
+   |<---------------------|   stdout,       |                        |
+   | multiplex(stdout,    |   callbacks,    |                        |
+   |   stderr)            |   result)       |                        |
+   |                      |                 |                        |
 ```
 
 ## Interfaces
@@ -51,19 +51,19 @@ Docker receives an HTTP POST with a body, and returns an HTTP response with a bo
 
 See [documentation for attach](http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.7/#attach-to-a-container).
 
-### bin/hoosegow(1)
+### bin/hoosegow
 
-The outer invocation of `bin/hoosegow` is started by Docker when the container starts. It is the entry point of the container.
+`bin/hoosegow` is started by Docker when the container starts. It is the entry point of the container.
 
-It runs itself again, and passes another pipe (sidechannel) to the child process.
+It decodes `STDIN` and calls the requested method on the Inmate.
 
-`STDERR` is left as-is. `STDOUT` from `bin/hoosegow`(2) and the sidechannel are encoded into the `STDOUT` that Docker sees.
+`STDOUT` is reopened so that we can encode a few things on it:
 
-### bin/hoosegow(2)
+* normal stdout from the inmate or child processes spawned by the inmate
+* data that is `yield`ed
+* the return value from the inmate.
 
-The inner invocation of `bin/hoosegow` decodes stdin and calls the requested method on the Inmate.
-
-`STDOUT` and `STDERR` are left as-is. When the Inmate yields or returns, the information is encoded on the sidechannel.
+`STDERR` is left as-is.
 
 ### Inmate
 

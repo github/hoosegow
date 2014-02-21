@@ -1,23 +1,13 @@
 #!/usr/bin/env ruby
 # See docs/dispatch.md for more information.
 
-docker_entry_point = ARGV.first != 'client'
+require_relative '../lib/hoosegow'
 
-HoosegowSidechannelFd = "HOOSEGOW_SIDECHANNEL_FD"
+real_stdout = $stdout.dup
+intercepted_stdout, intercepting_stdout = IO.pipe # returns reader,writer
+$stdout.reopen(intercepting_stdout)
 
-if docker_entry_point
-  require_relative '../lib/hoosegow/protocol'
-  stdout = IO.pipe
-  sidechannel = IO.pipe
-  Hoosegow::Protocol::EntryPoint.start(:inmate_stdout => stdout[0], :sidechannel => sidechannel[0]) do
-    scfd = sidechannel[1].to_i
-    pid = spawn({HoosegowSidechannelFd => scfd.to_s}, $0, 'client', :out => stdout[1], scfd => scfd)
-    Process.waitpid(pid)
-  end
-else
-  require_relative '../lib/hoosegow'
-  $stdout.sync = true
-  $stderr.sync = true
-  protocol = Hoosegow::Protocol::Inmate.new(:sidechannel => IO.for_fd(ENV[HoosegowSidechannelFd].to_i))
-  protocol.run!
-end
+Hoosegow::Protocol::Inmate.run({
+  :stdout => real_stdout,
+  :intercepted => intercepted_stdout,
+})

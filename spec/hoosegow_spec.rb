@@ -76,38 +76,6 @@ describe Hoosegow::Protocol::Proxy do
   end
 end
 
-describe Hoosegow::Protocol::EntryPoint do
-  it "combines a sidechannel and stdout" do
-    sidechannel = IO.pipe
-    inmate_stdout = IO.pipe
-    result = StringIO.new
-    result.set_encoding('BINARY')
-
-    protocol = Hoosegow::Protocol::EntryPoint.new(:stdout => result, :inmate_stdout => inmate_stdout[0], :sidechannel => sidechannel[0])
-    protocol.start!
-
-    sidechannel_data = MessagePack.pack("raw-data-from-sidechannel")
-    sidechannel_data1 = sidechannel_data[0..5]
-    sidechannel_data2 = sidechannel_data[6..-1]
-
-    inmate_stdout[1].write "stdout 1\n"
-    sleep 0.01
-    sidechannel[1].write MessagePack.pack('a') + sidechannel_data1
-    sleep 0.01
-    inmate_stdout[1].write "stdout 2"
-    sleep 0.01
-    sidechannel[1].write sidechannel_data2
-    sleep 0.01
-    inmate_stdout[1].write "stdout 3"
-    sleep 0.01
-    inmate_stdout[1].close
-
-    protocol.finish!
-
-    expect(result.string).to eq( MessagePack.pack([:stdout, "stdout 1\n"]) + MessagePack.pack('a') + MessagePack.pack([:stdout, "stdout 2"]) + sidechannel_data + MessagePack.pack([:stdout, "stdout 3"]) )
-  end
-end
-
 describe Hoosegow::Protocol::Inmate do
   it "calls appropriate render method" do
     inmate = double('inmate')
@@ -115,21 +83,29 @@ describe Hoosegow::Protocol::Inmate do
       and_yield(:a, 1).
       and_yield(:b, 2, 3).
       and_return('raboof')
+
     stdin = StringIO.new(MessagePack.pack(['render', ['foobar']]))
-    sidechannel = StringIO.new
-    sidechannel.set_encoding('BINARY')
-    Hoosegow::Protocol::Inmate.new(:inmate => inmate, :stdin => stdin, :sidechannel => sidechannel).run!
-    expect(sidechannel.string).to eq( MessagePack.pack([:yield, [:a, 1]]) + MessagePack.pack([:yield, [:b, 2, 3]]) + MessagePack.pack([:return, 'raboof']) )
+    stdout = StringIO.new
+    stdout.set_encoding('BINARY')
+    r,w = IO.pipe
+
+    Hoosegow::Protocol::Inmate.run(:inmate => inmate, :stdin => stdin, :stdout => stdout, :intercepted => r)
+
+    expect(stdout.string).to eq( MessagePack.pack([:yield, [:a, 1]]) + MessagePack.pack([:yield, [:b, 2, 3]]) + MessagePack.pack([:return, 'raboof']) )
   end
 
   it "encodes exceptions" do
     inmate = double('inmate')
     inmate.should_receive(:render).with('foobar').and_raise('boom')
+
     stdin = StringIO.new(MessagePack.pack(['render', ['foobar']]))
-    sidechannel = StringIO.new
-    sidechannel.set_encoding('BINARY')
-    Hoosegow::Protocol::Inmate.new(:inmate => inmate, :stdin => stdin, :sidechannel => sidechannel).run!
-    expect(sidechannel.string).to eq( MessagePack.pack([:raise, {:class => 'RuntimeError', :message => 'boom'}]) )
+    stdout = StringIO.new
+    stdout.set_encoding('BINARY')
+    r,w = IO.pipe
+
+    Hoosegow::Protocol::Inmate.run(:inmate => inmate, :stdin => stdin, :stdout => stdout, :intercepted => r)
+
+    expect(stdout.string).to eq( MessagePack.pack([:raise, {:class => 'RuntimeError', :message => 'boom'}]) )
   end
 
   it "does not hang if stdin isn't closed" do
@@ -139,10 +115,27 @@ describe Hoosegow::Protocol::Inmate do
 
     inmate = double('inmate')
     inmate.should_receive(:render).with('foobar').and_return('raboof')
-    sidechannel = StringIO.new
-    sidechannel.set_encoding('BINARY')
+    stdout = StringIO.new
+    stdout.set_encoding('BINARY')
+    r,w = IO.pipe
 
-    inmate_proxy = Hoosegow::Protocol::Inmate.new(:inmate => inmate, :stdin => stdin, :sidechannel => sidechannel)
-    timeout(2) { inmate_proxy.run! }
+    timeout(2) { Hoosegow::Protocol::Inmate.run(:inmate => inmate, :stdin => stdin, :stdout => stdout, :intercepted => r) }
+  end
+
+  it "encodes stdout" do
+    inmate = double('inmate')
+    inmate.should_receive(:render).with('foobar').and_return('raboof')
+
+    stdin = StringIO.new(MessagePack.pack(['render', ['foobar']]))
+    stdout = StringIO.new
+    stdout.set_encoding('BINARY')
+    r,w = IO.pipe
+    w.puts "STDOUT from somewhere"
+
+    Hoosegow::Protocol::Inmate.run(:inmate => inmate, :stdin => stdin, :stdout => stdout, :intercepted => r)
+
+    encoded_stdout = MessagePack.pack([:stdout, "STDOUT from somewhere\n"])
+    encoded_return = MessagePack.pack([:return, 'raboof'])
+    expect([encoded_stdout+encoded_return, encoded_return+encoded_stdout]).to include(stdout.string)
   end
 end
