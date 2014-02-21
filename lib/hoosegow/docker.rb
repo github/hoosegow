@@ -20,6 +20,9 @@ class Hoosegow
     #           :socket - Path to local Unix socket (unless using host and
     #                     port).
     #           :prestart - Start a new container after each `run_container` call.
+    #           :volumes  - A mapping of volumes to mount in the container. e.g.
+    #                       if the Dockerfile has `VOLUME /work`, you might use
+    #                       `:volumes => { "/work" => "/home/localuser/work/to/do" }`
     def initialize(options = {})
       if options[:host] || options[:port]
         @host   = options[:host] || "127.0.0.1"
@@ -28,6 +31,7 @@ class Hoosegow
         @socket_path = options[:socket] || "/var/run/docker.sock"
       end
       @prestart = options.fetch(:prestart, true)
+      @volumes  = options.fetch(:volumes, nil)
     end
 
     # Public: Create and start a Docker container if one hasn't been started
@@ -53,12 +57,12 @@ class Hoosegow
     # Returns nothing.
     def start_container(image)
       # Create container.
-      create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => image
+      create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => image, :Volumes => volumes_for_create
       res         = post uri(:create), create_body
       @id         = JSON.load(res)["Id"]
 
       # Start container
-      post uri(:start, @id)
+      post uri(:start, @id), JSON.dump(:Binds => volumes_for_bind)
     end
 
     # Attach to a container, writing data to container's STDIN.
@@ -220,6 +224,22 @@ class Hoosegow
         output << input.slice!(0, payload_length)
       end
       output
+    end
+
+    # Private: Generate the `Volumes` argument for creating a container.
+    #
+    # Given a hash of container_path => local_path in @volumes, generate a
+    # hash of container_path => {}.
+    def volumes_for_create
+      @volumes.each_with_object({}) { |(container_path, local_path), result| result[container_path] = {} }
+    end
+
+    # Private: Generate the `Binds` argument for starting a container.
+    #
+    # Given a hash of container_path => local_path in @volumes, generate an
+    # array of "local_path:container_path".
+    def volumes_for_bind
+      @volumes.map { |container_path, local_path| "#{local_path}:#{container_path}" }
     end
   end
 end
