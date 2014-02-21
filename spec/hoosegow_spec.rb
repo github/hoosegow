@@ -131,4 +131,18 @@ describe Hoosegow::Protocol::Inmate do
     Hoosegow::Protocol::Inmate.new(:inmate => inmate, :stdin => stdin, :sidechannel => sidechannel).run!
     expect(sidechannel.string).to eq( MessagePack.pack([:raise, {:class => 'RuntimeError', :message => 'boom'}]) )
   end
+
+  it "does not hang if stdin isn't closed" do
+    # Use a pipe so that we have a not-closed IO
+    stdin, feed_stdin = IO.pipe
+    feed_stdin.write(MessagePack.pack(['render', ['foobar']]))
+
+    inmate = double('inmate')
+    inmate.should_receive(:render).with('foobar').and_return('raboof')
+    sidechannel = StringIO.new
+    sidechannel.set_encoding('BINARY')
+
+    inmate_proxy = Hoosegow::Protocol::Inmate.new(:inmate => inmate, :stdin => stdin, :sidechannel => sidechannel)
+    timeout(2) { inmate_proxy.run! }
+  end
 end

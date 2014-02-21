@@ -149,7 +149,7 @@ class Hoosegow
       end
 
       def run!
-        name, args = MessagePack.unpack(@stdin.read)
+        name, args = MessagePack::Unpacker.new(@stdin).read
         result = @inmate.send(name, *args) do |*yielded|
           report(:yield, yielded)
           nil # Don't return anything from the inmate's `yield`.
