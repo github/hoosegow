@@ -37,13 +37,13 @@ class Hoosegow
     # data     - The data to pipe to the container's stdin.
     #
     # Returns the data from the container's stdout.
-    def run_container(image, data)
+    def run_container(image, data, &block)
       start_container(image) unless @prestart && @id
-      res = attach_container data
+      attach_container(data, &block)
       wait_container
       delete_container
       start_container(image) if @prestart
-      res
+      nil
     end
 
     # Public: Create and start a Docker container.
@@ -64,11 +64,10 @@ class Hoosegow
     # Attach to a container, writing data to container's STDIN.
     #
     # Returns combined STDOUT/STDERR from container.
-    def attach_container(data)
+    def attach_container(data, &block)
       params  = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 0, :stream => 1}
       request = Net::HTTP::Post.new uri(:attach, @id, params), HEADERS
-      res     = transport_request request, data
-      demux_streams res
+      transport_request request, data, &block
     end
 
     # Public: Wait for a container to finish.
