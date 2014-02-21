@@ -56,7 +56,10 @@ class Hoosegow
         end
 
         excludes.each do |path|
-          File.unlink(File.join(tmpdir, path))
+          full_path = File.join(tmpdir, path)
+          if File.file?(full_path)
+            File.unlink(File.join(tmpdir, path))
+          end
         end
 
         if dockerfile
