@@ -208,17 +208,5 @@ class Hoosegow
 
       URI::HTTP.build(:path => path, :query => query).request_uri
     end
-
-    # Private: Docker multiplexes stdout/stderr over the same socket. This code
-    # demuxes it and returns the combined streams.
-    def demux_streams(input)
-      output = ""
-      until input.empty?
-        header = input.slice!(0,8)
-        stream_id, payload_length = header.unpack "L<L>"
-        output << input.slice!(0, payload_length)
-      end
-      output
-    end
   end
 end
