@@ -237,9 +237,9 @@ class Hoosegow
     # Private: Generate the `Binds` argument for starting a container.
     #
     # Given a hash of container_path => local_path in @volumes, generate an
-    # array of "local_path:container_path".
+    # array of "local_path:container_path:rw".
     def volumes_for_bind
-      @volumes.map { |container_path, local_path| "#{local_path}:#{container_path}" }
+      @volumes.map { |container_path, local_path| "#{local_path}:#{container_path}:rw" }
     end
   end
 end
