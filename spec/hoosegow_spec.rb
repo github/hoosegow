@@ -48,8 +48,14 @@ describe Hoosegow::Protocol::Proxy do
     proxy.receive(docker_stdout(MessagePack.pack([:return, 1])))
     expect(proxy.return_value).to eq(1)
   end
+  it "decodes a known error class" do
+    expect { proxy.receive(docker_stdout(MessagePack.pack([:raise, {:class => 'RuntimeError', :message => 'I went boom'}]))) }.to raise_error(RuntimeError, "I went boom")
+  end
   it "decodes an error" do
     expect { proxy.receive(docker_stdout(MessagePack.pack([:raise, {:class => 'SomeInternalError', :message => 'I went boom'}]))) }.to raise_error(Hoosegow::InmateRuntimeError, "SomeInternalError: I went boom")
+  end
+  it "decodes an error with a stack trace" do
+    expect { proxy.receive(docker_stdout(MessagePack.pack([:raise, {:class => 'SomeInternalError', :message => 'I went boom', :backtrace => ['file.rb:33:in `example`']}]))) }.to raise_error_including_backtrace('file.rb:33:in `example`')
   end
   it "decodes stdout" do
     stdout.should_receive(:write).with('abc')
@@ -73,6 +79,14 @@ describe Hoosegow::Protocol::Proxy do
   end
   def docker_data(type, data)
     [type, data.bytesize].pack('CxxxN') + data
+  end
+  def raise_error_including_backtrace(backtrace_line)
+    raise_error do |e|
+      unless e.backtrace.include?(backtrace_line)
+        puts e.backtrace
+        raise "Expected backtrace to include #{backtrace_line}"
+      end
+    end
   end
 end
 
@@ -105,7 +119,12 @@ describe Hoosegow::Protocol::Inmate do
 
     Hoosegow::Protocol::Inmate.run(:inmate => inmate, :stdin => stdin, :stdout => stdout, :intercepted => r)
 
-    expect(stdout.string).to eq( MessagePack.pack([:raise, {:class => 'RuntimeError', :message => 'boom'}]) )
+    unpacked_type, unpacked_data = MessagePack.unpack(stdout.string)
+    expect(unpacked_type).to eq('raise')
+    expect(unpacked_data).to include('class' => 'RuntimeError')
+    expect(unpacked_data).to include('message' => 'boom')
+    expect(unpacked_data['backtrace']).to be_a(Array)
+    expect(unpacked_data['backtrace']).to include("#{__FILE__}:120:in `block (2 levels) in <top (required)>'")
   end
 
   it "does not hang if stdin isn't closed" do

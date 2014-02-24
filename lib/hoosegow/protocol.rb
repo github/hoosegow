@@ -47,7 +47,7 @@ class Hoosegow
               when 'return'
                 @return_value = inmate_value
               when 'raise'
-                raise Hoosegow::InmateRuntimeError, "#{inmate_value['class']}: #{inmate_value['message']}"
+                raise(*raise_args(inmate_value))
               when 'stdout'
                 @stdout.write(inmate_value)
               end
@@ -57,6 +57,19 @@ class Hoosegow
           end
         end
         @buffer = data
+      end
+
+      def raise_args(remote_error)
+        to_raise =
+          begin
+            [eval(remote_error['class']), remote_error['message']]
+          rescue NameError
+            [Hoosegow::InmateRuntimeError, "#{remote_error['class']}: #{remote_error['message']}"]
+          end
+        if backtrace = remote_error['backtrace']
+          to_raise << (backtrace + caller)
+        end
+        to_raise
       end
     end
 
@@ -93,7 +106,7 @@ class Hoosegow
         end
         report(:return, result)
       rescue => e
-        report(:raise, {:class => e.class.name, :message => e.message})
+        report(:raise, {:class => e.class.name, :message => e.message, :backtrace => e.backtrace})
       end
 
       def intercepting
