@@ -67,7 +67,7 @@ class Hoosegow
             [Hoosegow::InmateRuntimeError, "#{remote_error['class']}: #{remote_error['message']}"]
           end
         if backtrace = remote_error['backtrace']
-          to_raise << (backtrace + caller)
+          to_raise << (['---'] + backtrace + ['---'] + caller)
         end
         to_raise
       end
