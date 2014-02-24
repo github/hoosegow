@@ -37,13 +37,16 @@ class Hoosegow
     # data     - The data to pipe to the container's stdin.
     #
     # Returns the data from the container's stdout.
-    def run_container(image, data)
+    def run_container(image, data, &block)
       start_container(image) unless @prestart && @id
-      res = attach_container data
-      wait_container
-      delete_container
-      start_container(image) if @prestart
-      res
+      begin
+        attach_container(data, &block)
+      ensure
+        wait_container
+        delete_container
+        start_container(image) if @prestart
+      end
+      nil
     end
 
     # Public: Create and start a Docker container.
@@ -64,11 +67,10 @@ class Hoosegow
     # Attach to a container, writing data to container's STDIN.
     #
     # Returns combined STDOUT/STDERR from container.
-    def attach_container(data)
+    def attach_container(data, &block)
       params  = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 0, :stream => 1}
       request = Net::HTTP::Post.new uri(:attach, @id, params), HEADERS
-      res     = transport_request request, data
-      demux_streams res
+      transport_request request, data, &block
     end
 
     # Public: Wait for a container to finish.
@@ -102,7 +104,7 @@ class Hoosegow
     #
     # Returns build results.
     def build_image(name, tarfile)
-      post uri(:build, :t => name), tarfile do |json|
+      post uri(:build, :t => name, :rm => '1'), tarfile do |json|
         data = JSON.load(json)
         raise Hoosegow::ImageBuildError.new(data) if data['error']
         yield data if block_given?
@@ -158,14 +160,14 @@ class Hoosegow
       end while response.kind_of?(Net::HTTPContinue)
 
       socket.write(data) if data
-      body = ''
       response.reading_body(socket, request.response_body_permitted?) do
-        response.read_body do |segment|
-	  body << segment
-	  yield segment if block_given?
-	end
+        if block_given?
+          response.read_body do |segment|
+            yield segment
+          end
+        end
       end
-      body
+      response.body
     end
 
     # Private: Create a connection to API host or local Unix socket.
@@ -208,18 +210,6 @@ class Hoosegow
       path  = sprintf API_PATHS[endpoint], *args
 
       URI::HTTP.build(:path => path, :query => query).request_uri
-    end
-
-    # Private: Docker multiplexes stdout/stderr over the same socket. This code
-    # demuxes it and returns the combined streams.
-    def demux_streams(input)
-      output = ""
-      until input.empty?
-        header = input.slice!(0,8)
-        stream_id, payload_length = header.unpack "L<L>"
-        output << input.slice!(0, payload_length)
-      end
-      output
     end
   end
 end
