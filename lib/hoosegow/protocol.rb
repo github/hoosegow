@@ -47,7 +47,7 @@ class Hoosegow
               when 'return'
                 @return_value = inmate_value
               when 'raise'
-                raise(*raise_args(inmate_value))
+                raise(*raise_args(inmate_value, caller))
               when 'stdout'
                 @stdout.write(inmate_value)
               end
@@ -59,15 +59,15 @@ class Hoosegow
         @buffer = data
       end
 
-      def raise_args(remote_error)
+      def raise_args(remote_error, local_backtrace)
         to_raise =
           begin
             [eval(remote_error['class']), remote_error['message']]
           rescue NameError
             [Hoosegow::InmateRuntimeError, "#{remote_error['class']}: #{remote_error['message']}"]
           end
-        if backtrace = remote_error['backtrace']
-          to_raise << (['---'] + backtrace + ['---'] + caller)
+        if remote_backtrace = remote_error['backtrace']
+          to_raise << (['---'] + remote_backtrace + ['---'] + local_backtrace)
         end
         to_raise
       end
