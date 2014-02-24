@@ -231,6 +231,7 @@ class Hoosegow
     # Given a hash of container_path => local_path in @volumes, generate a
     # hash of container_path => {}.
     def volumes_for_create
+      return nil if @volumes.nil?
       @volumes.each_with_object({}) { |(container_path, local_path), result| result[container_path] = {} }
     end
 
@@ -239,6 +240,7 @@ class Hoosegow
     # Given a hash of container_path => local_path in @volumes, generate an
     # array of "local_path:container_path:rw".
     def volumes_for_bind
+      return nil if @volumes.nil?
       @volumes.map { |container_path, local_path| "#{local_path}:#{container_path}:rw" }
     end
   end
