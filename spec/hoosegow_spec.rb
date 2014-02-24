@@ -109,8 +109,8 @@ describe Hoosegow::Protocol::Inmate do
   end
 
   it "encodes exceptions" do
-    inmate = double('inmate')
-    inmate.should_receive(:render).with('foobar').and_raise('boom')
+    inmate = Object.new
+    def inmate.render(s) ; raise 'boom' ; end
 
     stdin = StringIO.new(MessagePack.pack(['render', ['foobar']]))
     stdout = StringIO.new
@@ -124,7 +124,7 @@ describe Hoosegow::Protocol::Inmate do
     expect(unpacked_data).to include('class' => 'RuntimeError')
     expect(unpacked_data).to include('message' => 'boom')
     expect(unpacked_data['backtrace']).to be_a(Array)
-    expect(unpacked_data['backtrace']).to include("#{__FILE__}:120:in `block (2 levels) in <top (required)>'")
+    expect(unpacked_data['backtrace'].first).to eq("#{__FILE__}:113:in `render'")
   end
 
   it "does not hang if stdin isn't closed" do
