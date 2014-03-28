@@ -21,4 +21,7 @@ class Hoosegow
 
   # Errors while importing dependencies
   class InmateImportError < Error; end
+
+  # Errors while running an inmate
+  class InmateRuntimeError < Error; end
 end

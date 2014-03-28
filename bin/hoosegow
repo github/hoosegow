@@ -1,6 +1,13 @@
 #!/usr/bin/env ruby
+# See docs/dispatch.md for more information.
 
 require_relative '../lib/hoosegow'
 
-hoosegow = Hoosegow.new :no_proxy => true
-STDOUT.write hoosegow.proxy_receive STDIN
+real_stdout = $stdout.dup
+intercepted_stdout, intercepting_stdout = IO.pipe # returns reader,writer
+$stdout.reopen(intercepting_stdout)
+
+Hoosegow::Protocol::Inmate.run({
+  :stdout => real_stdout,
+  :intercepted => intercepted_stdout,
+})

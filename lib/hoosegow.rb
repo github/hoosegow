@@ -1,6 +1,7 @@
 require_relative 'hoosegow/docker'
 require_relative 'hoosegow/exceptions'
 require_relative 'hoosegow/image_bundle'
+require_relative 'hoosegow/protocol'
 
 require 'msgpack'
 
@@ -56,23 +57,15 @@ class Hoosegow
   #
   # name - The method to call in the Docker instance.
   # args - Arguments that should be passed to the Docker instance method.
+  # block - A block that can be yielded to.
+  #
+  # See docs/dispatch.md for more information.
   #
   # Returns the return value from the Docker instance method.
-  def proxy_send(name, args)
-    data = MessagePack.pack [name, args]
-    result = docker.run_container image_name, data
-    MessagePack.unpack result
-  end
-
-  # Public: Receives proxied method call from the non-Docker instance.
-  #
-  # pipe - The pipe that the method call will come in on.
-  #
-  # Returns the return value of the specified function.
-  def proxy_receive(pipe)
-    name, args = MessagePack.unpack(pipe)
-    result = send name, *args
-    MessagePack.pack(result)
+  def proxy_send(name, args, &block)
+    proxy = Hoosegow::Protocol::Proxy.new(:stdout => $stdout, :stderr => $stderr, :yield => block)
+    docker.run_container(image_name, proxy.encode_send(name, args)) { |message| proxy.receive(message) }
+    proxy.return_value
   end
 
   # Public: Load inmate methods from #{inmate_dir}/inmate.rb and hook them up
@@ -99,8 +92,8 @@ class Hoosegow
     else
       inmate_methods = Hoosegow::Inmate.instance_methods
       inmate_methods.each do |name|
-        define_singleton_method name do |*args|
-          proxy_send name, args
+        define_singleton_method name do |*args, &block|
+          proxy_send name, args, &block
         end
       end
     end
