@@ -231,8 +231,11 @@ class Hoosegow
     # Given a hash of container_path => local_path in @volumes, generate a
     # hash of container_path => {}.
     def volumes_for_create
-      return nil if @volumes.nil?
-      @volumes.each_with_object({}) { |(container_path, local_path), result| result[container_path] = {} }
+      result = {}
+      each_volume do |container_path, local_path, permissions|
+        result[container_path] = {}
+      end
+      result
     end
 
     # Private: Generate the `Binds` argument for starting a container.
@@ -240,8 +243,23 @@ class Hoosegow
     # Given a hash of container_path => local_path in @volumes, generate an
     # array of "local_path:container_path:rw".
     def volumes_for_bind
-      return nil if @volumes.nil?
-      @volumes.map { |container_path, local_path| "#{local_path}:#{container_path}:rw" }
+      result = []
+      each_volume do |container_path, local_path, permissions|
+        result << "#{local_path}:#{container_path}:#{permissions}"
+      end
+      result
+    end
+
+    # Private: Yields information about each `@volume`.
+    #
+    #   each_volume do |container_path, local_path, permissions|
+    #   end
+    def each_volume
+      if @volumes
+        @volumes.each do |container_path, local_path|
+          yield container_path, local_path, "rw"
+        end
+      end
     end
   end
 end

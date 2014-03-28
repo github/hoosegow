@@ -6,8 +6,8 @@ describe Hoosegow::Docker do
 
     context 'unspecified' do
       subject { described_class.new }
-      its(:volumes_for_create) { should be_nil }
-      its(:volumes_for_bind) { should be_nil }
+      its(:volumes_for_create) { should be_empty }
+      its(:volumes_for_bind) { should be_empty }
     end
 
     context 'empty' do
