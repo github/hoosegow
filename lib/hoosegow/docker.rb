@@ -56,7 +56,7 @@ class Hoosegow
     # Returns nothing.
     def start_container(image)
       # Create container.
-      create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => image
+      create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :Image => image
       res         = post uri(:create), create_body
       @id         = JSON.load(res)["Id"]
 
