@@ -17,9 +17,18 @@ describe Hoosegow::Docker do
     end
 
     context 'with volumes' do
-      let(:volumes) { {"/inside/path" => "/home/burke/data-for-container", "/other/path" => "/etc/shared-config"} }
-      its(:volumes_for_create) { should == {"/inside/path" => {}, "/other/path" => {}} }
-      its(:volumes_for_bind) { should == ["/home/burke/data-for-container:/inside/path:rw", "/etc/shared-config:/other/path:rw"] }
+      let(:volumes) { {
+        "/inside/path" => "/home/burke/data-for-container:rw",
+        "/other/path" => "/etc/shared-config",
+      } }
+      its(:volumes_for_create) { should == {
+        "/inside/path" => {},
+        "/other/path" => {},
+      } }
+      its(:volumes_for_bind) { should == [
+        "/home/burke/data-for-container:/inside/path:rw",
+        "/etc/shared-config:/other/path:ro",
+      ] }
     end
   end
 end

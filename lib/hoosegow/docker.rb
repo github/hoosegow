@@ -21,7 +21,13 @@ class Hoosegow
     #                     port).
     #           :prestart - Start a new container after each `run_container` call.
     #           :volumes  - A mapping of volumes to mount in the container. e.g.
-    #                       if the Dockerfile has `VOLUME /work`, you might use
+    #                       if the Dockerfile has `VOLUME /work`, where the container will
+    #                       write data, and `VOLUME /config` where read-only configuration
+    #                       is, you might use
+    #                         :volumes => {
+    #                           "/config" => "/etc/shared-config",
+    #                           "/work"   => "/data/work:rw",
+    #                         }
     #                       `:volumes => { "/work" => "/home/localuser/work/to/do" }`
     def initialize(options = {})
       if options[:host] || options[:port]
@@ -257,7 +263,9 @@ class Hoosegow
     def each_volume
       if @volumes
         @volumes.each do |container_path, local_path|
-          yield container_path, local_path, "rw"
+          local_path, permissions = local_path.split(':', 2)
+          permissions ||= "ro"
+          yield container_path, local_path, permissions
         end
       end
     end
