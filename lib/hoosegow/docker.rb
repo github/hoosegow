@@ -20,6 +20,15 @@ class Hoosegow
     #           :socket - Path to local Unix socket (unless using host and
     #                     port).
     #           :prestart - Start a new container after each `run_container` call.
+    #           :volumes  - A mapping of volumes to mount in the container. e.g.
+    #                       if the Dockerfile has `VOLUME /work`, where the container will
+    #                       write data, and `VOLUME /config` where read-only configuration
+    #                       is, you might use
+    #                         :volumes => {
+    #                           "/config" => "/etc/shared-config",
+    #                           "/work"   => "/data/work:rw",
+    #                         }
+    #                       `:volumes => { "/work" => "/home/localuser/work/to/do" }`
     def initialize(options = {})
       if options[:host] || options[:port]
         @host   = options[:host] || "127.0.0.1"
@@ -28,6 +37,7 @@ class Hoosegow
         @socket_path = options[:socket] || "/var/run/docker.sock"
       end
       @prestart = options.fetch(:prestart, true)
+      @volumes  = options.fetch(:volumes, nil)
     end
 
     # Public: Create and start a Docker container if one hasn't been started
@@ -56,12 +66,12 @@ class Hoosegow
     # Returns nothing.
     def start_container(image)
       # Create container.
-      create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => image
+      create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :image => image, :Volumes => volumes_for_create
       res         = post uri(:create), create_body
       @id         = JSON.load(res)["Id"]
 
       # Start container
-      post uri(:start, @id)
+      post uri(:start, @id), JSON.dump(:Binds => volumes_for_bind)
     end
 
     # Attach to a container, writing data to container's STDIN.
@@ -210,6 +220,44 @@ class Hoosegow
       path  = sprintf API_PATHS[endpoint], *args
 
       URI::HTTP.build(:path => path, :query => query).request_uri
+    end
+
+    # Private: Generate the `Volumes` argument for creating a container.
+    #
+    # Given a hash of container_path => local_path in @volumes, generate a
+    # hash of container_path => {}.
+    def volumes_for_create
+      result = {}
+      each_volume do |container_path, local_path, permissions|
+        result[container_path] = {}
+      end
+      result
+    end
+
+    # Private: Generate the `Binds` argument for starting a container.
+    #
+    # Given a hash of container_path => local_path in @volumes, generate an
+    # array of "local_path:container_path:rw".
+    def volumes_for_bind
+      result = []
+      each_volume do |container_path, local_path, permissions|
+        result << "#{local_path}:#{container_path}:#{permissions}"
+      end
+      result
+    end
+
+    # Private: Yields information about each `@volume`.
+    #
+    #   each_volume do |container_path, local_path, permissions|
+    #   end
+    def each_volume
+      if @volumes
+        @volumes.each do |container_path, local_path|
+          local_path, permissions = local_path.split(':', 2)
+          permissions ||= "ro"
+          yield container_path, local_path, permissions
+        end
+      end
     end
   end
 end
