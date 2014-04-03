@@ -29,6 +29,8 @@ class Hoosegow
     #                           "/work"   => "/data/work:rw",
     #                         }
     #                       `:volumes => { "/work" => "/home/localuser/work/to/do" }`
+    #           :Other - any option with a capitalized key will be passed on
+    #                    to the 'create container' call. See http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.9/#create-a-container
     def initialize(options = {})
       if options[:host] || options[:port]
         @host   = options[:host] || "127.0.0.1"
@@ -38,6 +40,7 @@ class Hoosegow
       end
       @prestart = options.fetch(:prestart, true)
       @volumes  = options.fetch(:volumes, nil)
+      @container_options = options.each_with_object({}) { |(name, value), h| h[name.to_s] = value if name.to_s =~ /\A[A-Z]/ }
     end
 
     # Public: Create and start a Docker container if one hasn't been started
@@ -66,7 +69,8 @@ class Hoosegow
     # Returns nothing.
     def start_container(image)
       # Create container.
-      create_body = JSON.dump :StdinOnce => true, :OpenStdin => true, :Image => image, :Volumes => volumes_for_create
+      create_opts = @container_options.merge("StdinOnce" => true, "OpenStdin" => true, "Image" => image, "Volumes" => volumes_for_create)
+      create_body = JSON.dump(create_opts)
       res         = post uri(:create), create_body
       @id         = JSON.load(res)["Id"]
 
