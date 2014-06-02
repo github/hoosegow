@@ -7,8 +7,9 @@ RUN apt-get install -y build-essential zlib1g-dev libssl-dev openssl libreadline
 
 # Install rbenv
 RUN git clone https://github.com/sstephenson/rbenv.git /.rbenv
-RUN echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> /.profile
-RUN echo 'eval "$(rbenv init -)"' 				>> /.profile
+RUN echo 'export PATH="/.rbenv/bin:$PATH"' >> /etc/profile
+RUN echo 'export RBENV_ROOT="/.rbenv"'     >> /etc/profile
+RUN echo 'eval "$(rbenv init -)"'          >> /etc/profile
 
 # Install rbenv build plugin
 RUN mkdir -p /.rbenv/plugins
