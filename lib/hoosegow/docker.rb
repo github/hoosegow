@@ -19,6 +19,7 @@ class Hoosegow
     #           :port   - TCP port to connect to (unless using Unix socket).
     #           :socket - Path to local Unix socket (unless using host and
     #                     port).
+    #           :after_create - A proc that will be called after a container is started.
     #           :prestart - Start a new container after each `run_container` call.
     #           :volumes  - A mapping of volumes to mount in the container. e.g.
     #                       if the Dockerfile has `VOLUME /work`, where the container will
@@ -38,6 +39,7 @@ class Hoosegow
       else
         @socket_path = options[:socket] || "/var/run/docker.sock"
       end
+      @after_create = options.fetch(:after_create, lambda { |container_info| })
       @prestart = options.fetch(:prestart, true)
       @volumes  = options.fetch(:volumes, nil)
       @container_options = options.each_with_object({}) { |(name, value), h| h[name.to_s] = value if name.to_s =~ /\A[A-Z]/ }
@@ -72,7 +74,11 @@ class Hoosegow
       create_opts = @container_options.merge("StdinOnce" => true, "OpenStdin" => true, "Image" => image, "Volumes" => volumes_for_create)
       create_body = JSON.dump(create_opts)
       res         = post uri(:create), create_body
-      @id         = JSON.load(res)["Id"]
+      info        = JSON.load(res)
+      callback @after_create, info
+      @id         = info["Id"]
+
+      # tell me about the id
 
       # Start container
       post uri(:start, @id), JSON.dump(:Binds => volumes_for_bind)
@@ -262,6 +268,11 @@ class Hoosegow
           yield container_path, local_path, permissions
         end
       end
+    end
+
+    def callback(callback_proc, *args)
+      callback_proc.call(*args)
+    rescue Object
     end
   end
 end
