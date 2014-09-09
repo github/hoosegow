@@ -77,8 +77,8 @@ class Hoosegow
       create_body = JSON.dump(create_opts)
       res         = post uri(:create), create_body
       info        = JSON.load(res)
-      callback @after_create, info
       @id         = info["Id"]
+      callback @after_create, info
 
       # Start container
       post uri(:start, @id), JSON.dump(:Binds => volumes_for_bind)
