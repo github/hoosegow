@@ -21,6 +21,7 @@ class Hoosegow
     #                     port).
     #           :after_create - A proc that will be called after a container is created.
     #           :after_start  - A proc that will be called after a container is started.
+    #           :after_stop   - A proc that will be called after a container stops.
     #           :prestart - Start a new container after each `run_container` call.
     #           :volumes  - A mapping of volumes to mount in the container. e.g.
     #                       if the Dockerfile has `VOLUME /work`, where the container will
@@ -76,13 +77,13 @@ class Hoosegow
       create_opts = @container_options.merge("StdinOnce" => true, "OpenStdin" => true, "Image" => image, "Volumes" => volumes_for_create)
       create_body = JSON.dump(create_opts)
       res         = post uri(:create), create_body
-      info        = JSON.load(res)
-      @id         = info["Id"]
-      callback @after_create, info
+      @info       = JSON.load(res)
+      @id         = @info["Id"]
+      callback @after_create, @info
 
       # Start container
       post uri(:start, @id), JSON.dump(:Binds => volumes_for_bind)
-      callback @after_start, info
+      callback @after_start, @info
     end
 
     # Attach to a container, writing data to container's STDIN.
@@ -99,6 +100,7 @@ class Hoosegow
     # Returns nothing.
     def wait_container
       post uri(:wait, @id)
+      callback @after_stop, @info
     end
 
     # Public: Stop the running container.
@@ -107,6 +109,7 @@ class Hoosegow
     def stop_container
       return unless @id
       post uri(:stop, @id, :t => 0)
+      callback @after_stop, @info
     end
 
     # Public: Delete the last started container.
