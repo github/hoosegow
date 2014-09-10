@@ -43,6 +43,7 @@ class Hoosegow
       end
       @after_create = options.fetch(:after_create, lambda { |container_info| })
       @after_start  = options.fetch(:after_start,  lambda { |container_info| })
+      @after_stop   = options.fetch(:after_stop,   lambda { |container_info| })
       @prestart = options.fetch(:prestart, true)
       @volumes  = options.fetch(:volumes, nil)
       @container_options = options.each_with_object({}) { |(name, value), h| h[name.to_s] = value if name.to_s =~ /\A[A-Z]/ }
