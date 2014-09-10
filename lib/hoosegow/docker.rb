@@ -41,9 +41,9 @@ class Hoosegow
       else
         @socket_path = options[:socket] || "/var/run/docker.sock"
       end
-      @after_create = options.fetch(:after_create, lambda { |container_info| })
-      @after_start  = options.fetch(:after_start,  lambda { |container_info| })
-      @after_stop   = options.fetch(:after_stop,   lambda { |container_info| })
+      @after_create = options[:after_create]
+      @after_start  = options[:after_start]
+      @after_stop   = options[:after_stop]
       @prestart = options.fetch(:prestart, true)
       @volumes  = options.fetch(:volumes, nil)
       @container_options = options.each_with_object({}) { |(name, value), h| h[name.to_s] = value if name.to_s =~ /\A[A-Z]/ }
@@ -276,7 +276,7 @@ class Hoosegow
     end
 
     def callback(callback_proc, *args)
-      callback_proc.call(*args)
+      callback_proc.call(*args) if callback_proc
     rescue Object
     end
   end
