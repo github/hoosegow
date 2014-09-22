@@ -131,9 +131,11 @@ class Hoosegow
     def build_image(name, tarfile)
       # Setup parser to receive chunks and yield parsed JSON objects.
       ret = []
+      error = nil
       parser = Yajl::Parser.new
       parser.parser.on_parse_complete = Proc.new do |obj|
         ret << obj
+        error = Hoosegow::ImageBuildError.new(obj) if obj["error"]
         yield obj
       end
 
@@ -142,6 +144,8 @@ class Hoosegow
       post build_uri, tarfile do |chunk|
         parser << chunk
       end
+
+      raise error if error
 
       # Return Array of received objects.
       ret
