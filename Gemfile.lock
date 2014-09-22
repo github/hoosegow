@@ -2,7 +2,6 @@ PATH
   remote: .
   specs:
     hoosegow (0.2.1)
-      json
       msgpack
       yajl-ruby
 
@@ -10,7 +9,6 @@ GEM
   remote: https://rubygems.org/
   specs:
     diff-lcs (1.2.4)
-    json (1.8.1)
     msgpack (0.5.8)
     rspec (2.14.1)
       rspec-core (~> 2.14.0)
