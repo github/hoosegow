@@ -4,6 +4,7 @@
 require_relative '../lib/hoosegow'
 
 real_stdout = $stdout.dup
+real_stdout.sync = true
 intercepted_stdout, intercepting_stdout = IO.pipe # returns reader,writer
 $stdout.reopen(intercepting_stdout)
 
