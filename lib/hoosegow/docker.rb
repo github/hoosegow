@@ -1,6 +1,6 @@
 require 'net/http'
 require 'socket'
-require 'json'
+require 'yajl'
 require 'uri'
 
 require_relative 'exceptions'
@@ -76,14 +76,14 @@ class Hoosegow
     def start_container(image)
       # Create container.
       create_opts = @container_options.merge("StdinOnce" => true, "OpenStdin" => true, "Image" => image, "Volumes" => volumes_for_create)
-      create_body = JSON.dump(create_opts)
+      create_body = Yajl.dump(create_opts)
       res         = post uri(:create), create_body
-      @info       = JSON.load(res)
+      @info       = Yajl.load(res)
       @id         = @info["Id"]
       callback @after_create, @info
 
       # Start container
-      post uri(:start, @id), JSON.dump(:Binds => volumes_for_bind)
+      post uri(:start, @id), Yajl.dump(:Binds => volumes_for_bind)
       callback @after_start, @info
     end
 
@@ -127,13 +127,28 @@ class Hoosegow
     # name    - The name to give the image.
     # tarfile - Tarred data for creating image. See http://docs.docker.io/en/latest/api/docker_remote_api_v1.5/#build-an-image-from-dockerfile-via-stdin
     #
-    # Returns build results.
+    # Returns Array of build result objects from the Docker API.
     def build_image(name, tarfile)
-      post uri(:build, :t => name, :rm => '1'), tarfile do |json|
-        data = JSON.load(json)
-        raise Hoosegow::ImageBuildError.new(data) if data['error']
-        yield data if block_given?
+      # Setup parser to receive chunks and yield parsed JSON objects.
+      ret = []
+      error = nil
+      parser = Yajl::Parser.new
+      parser.on_parse_complete = Proc.new do |obj|
+        ret << obj
+        error = Hoosegow::ImageBuildError.new(obj) if obj["error"]
+        yield obj if block_given?
       end
+
+      # Make API call and feed chunks to parser.
+      build_uri = uri(:build, :t => name, :rm => '1')
+      post build_uri, tarfile do |chunk|
+        parser << chunk
+      end
+
+      raise error if error
+
+      # Return Array of received objects.
+      ret
     end
 
     # Get information about an image.

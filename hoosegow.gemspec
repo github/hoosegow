@@ -10,5 +10,5 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://github.com/github/hoosegow'
   s.add_development_dependency 'rspec'
   s.add_runtime_dependency     'msgpack'
-  s.add_runtime_dependency     'json'
+  s.add_runtime_dependency     'yajl-ruby'
 end

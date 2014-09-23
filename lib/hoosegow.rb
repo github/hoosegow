@@ -113,9 +113,9 @@ class Hoosegow
   #
   # Returns true/false.
   def image_exists?
-    JSON.parse docker.inspect_image(image_name)
+    Yajl.load docker.inspect_image(image_name)
     true
-  rescue JSON::ParserError
+  rescue Yajl::ParseError
     false
   end
 
