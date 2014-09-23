@@ -133,7 +133,7 @@ class Hoosegow
       ret = []
       error = nil
       parser = Yajl::Parser.new
-      parser.parser.on_parse_complete = Proc.new do |obj|
+      parser.on_parse_complete = Proc.new do |obj|
         ret << obj
         error = Hoosegow::ImageBuildError.new(obj) if obj["error"]
         yield obj
