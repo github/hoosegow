@@ -136,7 +136,7 @@ class Hoosegow
       parser.on_parse_complete = Proc.new do |obj|
         ret << obj
         error = Hoosegow::ImageBuildError.new(obj) if obj["error"]
-        yield obj
+        yield obj if block_given?
       end
 
       # Make API call and feed chunks to parser.
