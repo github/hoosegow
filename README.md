@@ -4,6 +4,13 @@ Ephemeral Docker jails for running untrusted Ruby code.
 
 Hoowgow runs both in your code and in a Docker container. When you call a method on a Hoosegow instance, it proxies the method call to another instance of Hoosegow running inside a docker container.
 
+#### Installing
+
+Gems are available from the [releases page](https://github.com/github/hoosegow/releases). Download a gem to
+your app's `vendor/cache` directory, and add this to your Gemfile:
+
+    gem "hoosegow"
+
 #### Defining Methods to Proxy
 
 You need to define the methods you want to have run in the Docker container. To do this, you need to create a `inmate.rb` file that defines a `Hoosegow::Inmate` module. Any methods on this module will be available on `Hoosegow` instances and will be proxied to the Docker container. Here is an example `inmate.rb` file:
