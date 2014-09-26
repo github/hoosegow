@@ -2,7 +2,7 @@ require 'rake'
 
 Gem::Specification.new do |s|
   s.name        = 'hoosegow'
-  s.version     = '1.0.0'
+  s.version     = '1.0.1'
   s.summary     = "A Docker jail for native rendering code"
   s.authors     = ["Ben Toews"]
   s.email       = 'mastahyeti@github.com'
