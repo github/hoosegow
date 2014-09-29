@@ -36,7 +36,7 @@ class Hoosegow
     #           :Other - any option with a capitalized key will be passed on
     #                    to the 'create container' call. See http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.9/#create-a-container
     def initialize(options = {})
-      ::Docker.url         = docker_url options
+      ::Docker.url       = docker_url options
       @after_create      = options[:after_create]
       @after_start       = options[:after_start]
       @after_stop        = options[:after_stop]
