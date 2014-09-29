@@ -99,8 +99,7 @@ class Hoosegow
     # Returns nothing.
     def wait_container
       @container.wait
-      callback @after_stop, @info
-    end
+      callback @after_stop, @container.info
 
     # Public: Stop the running container.
     #
@@ -108,7 +107,7 @@ class Hoosegow
     def stop_container
       return unless @container
       @container.stop :timeout => 0
-      callback @after_stop, @info
+      callback @after_stop, @container.info
     end
 
     # Public: Delete the last started container.
