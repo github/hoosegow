@@ -23,4 +23,5 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rspec'
   s.add_runtime_dependency     'msgpack'
   s.add_runtime_dependency     'yajl-ruby'
+  s.add_runtime_dependency     'docker-api', '~> 1.13.3'
 end
