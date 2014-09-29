@@ -36,7 +36,7 @@ class Hoosegow
     #           :Other - any option with a capitalized key will be passed on
     #                    to the 'create container' call. See http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.9/#create-a-container
     def initialize(options = {})
-      Docker.url         = docker_url options
+      ::Docker.url         = docker_url options
       @after_create      = options[:after_create]
       @after_start       = options[:after_start]
       @after_stop        = options[:after_stop]
@@ -68,7 +68,7 @@ class Hoosegow
     end
 
     def create_container(image)
-      @container = Docker::Container.create @container_options.merge(
+      @container = ::Docker::Container.create @container_options.merge(
         :StdinOnce => true,
         :OpenStdin => true,
         :Volumes   => volumes_for_create,
@@ -138,7 +138,7 @@ class Hoosegow
 
       # Make API call to create image.
       opts = {:t => name, :rm => '1'}
-      Docker::Image.build_from_tar StringIO.new(tarfile), opts do |chunk|
+      ::Docker::Image.build_from_tar StringIO.new(tarfile), opts do |chunk|
         parser << chunk
       end
 
