@@ -51,4 +51,43 @@ describe Hoosegow::Docker do
       expect(::Docker.url).to eq("unix:///path/to/socket")
     end
   end
+
+  context "callbacks" do
+    let(:cb) { lambda { |info|  } }
+
+    it "calls after_create" do
+      expect(cb).to receive(:call).with { |*args| args.first.is_a? Hash }
+      docker = Hoosegow::Docker.new CONFIG.merge(:after_create => cb)
+      begin
+        docker.create_container CONFIG[:image_name]
+      ensure
+        docker.stop_container
+        docker.delete_container
+      end
+    end
+
+    it "calls after_start" do
+      expect(cb).to receive(:call).with { |*args| args.first.is_a? Hash }
+      docker = Hoosegow::Docker.new CONFIG.merge(:after_start => cb)
+      begin
+        docker.create_container CONFIG[:image_name]
+        docker.start_container
+      ensure
+        docker.stop_container
+        docker.delete_container
+      end
+    end
+
+    it "calls after_stop" do
+      expect(cb).to receive(:call).with { |*args| args.first.is_a? Hash }
+      docker = Hoosegow::Docker.new CONFIG.merge(:after_stop => cb)
+      begin
+        docker.create_container CONFIG[:image_name]
+        docker.start_container
+      ensure
+        docker.stop_container
+        docker.delete_container
+      end
+    end
+  end
 end
