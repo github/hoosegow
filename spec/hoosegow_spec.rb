@@ -10,18 +10,20 @@ end
 CONFIG.merge! :inmate_dir => File.join(File.dirname(__FILE__), 'test_inmate')
 
 
-describe Hoosegow, "render_*" do
-  it "runs directly if in docker" do
-    hoosegow = Hoosegow.new CONFIG.merge(:no_proxy => true)
-    hoosegow.stub :proxy_send => "not raboof"
-    hoosegow.render_reverse("foobar").should eq("raboof")
-  end
+describe Hoosegow do
+  context "no_proxy option" do
+    it "runs directly if set" do
+      hoosegow = Hoosegow.new CONFIG.merge(:no_proxy => true)
+      hoosegow.stub :proxy_send => "not raboof"
+      hoosegow.render_reverse("foobar").should eq("raboof")
+    end
 
-  it "runs via proxy if not in docker" do
-    hoosegow = Hoosegow.new CONFIG
-    hoosegow.stub :proxy_send => "not raboof"
-    hoosegow.render_reverse("foobar").should eq("not raboof")
-    hoosegow.cleanup
+    it "runs via proxy if not set" do
+      hoosegow = Hoosegow.new CONFIG
+      hoosegow.stub :proxy_send => "not raboof"
+      hoosegow.render_reverse("foobar").should eq("not raboof")
+      hoosegow.cleanup
+    end
   end
 
   context "image_exists?" do
