@@ -55,7 +55,7 @@ class Hoosegow
     def run_container(image, data, &block)
       unless @prestart && @container
         create_container(image)
-        start_container(image)
+        start_container
       end
 
       begin
@@ -65,12 +65,17 @@ class Hoosegow
         delete_container
         if @prestart
           create_container(image)
-          start_container(image)
+          start_container
         end
       end
       nil
     end
 
+    # Public: Create a container using the specified image.
+    #
+    # image - The name of the image to start the container with.
+    #
+    # Returns nothing.
     def create_container(image)
       @container = ::Docker::Container.create @container_options.merge(
         :StdinOnce => true,
@@ -81,12 +86,10 @@ class Hoosegow
       callback @after_create
     end
 
-    # Public: Create and start a Docker container.
-    #
-    # image - The name of the image to start the container with.
+    # Public: Start a Docker container.
     #
     # Returns nothing.
-    def start_container(image)
+    def start_container
       @container.start :Binds => volumes_for_bind
       callback @after_start
     end
