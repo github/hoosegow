@@ -1,5 +1,13 @@
 require_relative '../lib/hoosegow/docker'
 
+begin
+  require_relative '../config'
+rescue LoadError
+  CONFIG = {}
+end
+
+CONFIG.merge! :inmate_dir => File.join(File.dirname(__FILE__), 'test_inmate')
+
 describe Hoosegow::Docker do
   context 'volumes' do
     subject { described_class.new(:volumes => volumes) }
@@ -29,6 +37,18 @@ describe Hoosegow::Docker do
         "/home/burke/data-for-container:/inside/path:rw",
         "/etc/shared-config:/other/path:ro",
       ] }
+    end
+  end
+
+  context 'docker_url' do
+    it "correctly generates TCP urls" do
+      hoosegow = Hoosegow::Docker.new CONFIG.merge(:host => "1.1.1.1", :port => 1234)
+      expect(::Docker.url).to eq("tcp://1.1.1.1:1234")
+    end
+
+    it "correctly generates Unix urls" do
+      hoosegow = Hoosegow::Docker.new CONFIG.merge(:socket => "/path/to/socket")
+      expect(::Docker.url).to eq("unix:///path/to/socket")
     end
   end
 end
