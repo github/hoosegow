@@ -1,18 +1,8 @@
-GIT
-  remote: https://github.com/mastahyeti/docker-api
-  revision: df4fae3ac7088b88aefdc966c55f0cc26522b21f
-  branch: build_from_tar
-  specs:
-    docker-api (1.13.3)
-      archive-tar-minitar
-      excon (>= 0.38.0)
-      json
-
 PATH
   remote: .
   specs:
     hoosegow (1.0.1)
-      docker-api (~> 1.13.3)
+      docker-api (~> 1.13.4)
       msgpack
       yajl-ruby
 
@@ -21,9 +11,14 @@ GEM
   specs:
     archive-tar-minitar (0.5.2)
     diff-lcs (1.2.4)
+    docker-api (1.13.4)
+      archive-tar-minitar
+      excon (>= 0.38.0)
+      json
     excon (0.39.6)
     json (1.8.1)
     msgpack (0.5.8)
+    rake (0.9.6)
     rspec (2.14.1)
       rspec-core (~> 2.14.0)
       rspec-expectations (~> 2.14.0)
@@ -38,6 +33,6 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  docker-api!
   hoosegow!
+  rake
   rspec

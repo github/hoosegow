@@ -21,6 +21,7 @@ Gem::Specification.new do |s|
   s.executables = ['hoosegow']
   s.homepage    = 'https://github.com/github/hoosegow'
   s.add_development_dependency 'rspec'
+  s.add_development_dependency 'rake'
   s.add_runtime_dependency     'msgpack'
   s.add_runtime_dependency     'yajl-ruby'
   s.add_runtime_dependency     'docker-api', '~> 1.13.4'
