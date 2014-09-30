@@ -1,7 +1,5 @@
 source 'https://rubygems.org'
 
-gem "docker-api", :git => "https://github.com/mastahyeti/docker-api", :branch => "build_from_tar"
-
 gemspec
 
 # Load dependency Gemfile if present.

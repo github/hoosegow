@@ -1,5 +1,5 @@
 require 'yajl'
-require 'docker-api'
+require 'docker'
 require 'stringio'
 
 require_relative 'exceptions'
@@ -54,7 +54,8 @@ class Hoosegow
     # Returns the data from the container's stdout.
     def run_container(image, data, &block)
       unless @prestart && @container
-        create_container(image) && start_container(image)
+        create_container(image)
+        start_container(image)
       end
 
       begin
@@ -62,7 +63,10 @@ class Hoosegow
       ensure
         wait_container
         delete_container
-        create_container(image) && start_container(image) if @prestart
+        if @prestart
+          create_container(image)
+          start_container(image)
+        end
       end
       nil
     end
@@ -74,7 +78,7 @@ class Hoosegow
         :Volumes   => volumes_for_create,
         :Image     => image
       )
-      callback @after_create, container.info
+      callback @after_create, @container.info
     end
 
     # Public: Create and start a Docker container.
@@ -84,14 +88,15 @@ class Hoosegow
     # Returns nothing.
     def start_container(image)
       @container.start :Binds => volumes_for_bind
-      callback @after_start, container.info
+      callback @after_start, @container.info
     end
 
     # Attach to a container, writing data to container's STDIN.
     #
     # Returns combined STDOUT/STDERR from container.
     def attach_container(data, &block)
-      @container.attach :stdin => true, :logs => false, &block
+      stdin = StringIO.new data
+      @container.attach :stdin => stdin, &block
     end
 
     # Public: Wait for a container to finish.
@@ -100,6 +105,7 @@ class Hoosegow
     def wait_container
       @container.wait
       callback @after_stop, @container.info
+    end
 
     # Public: Stop the running container.
     #
@@ -153,7 +159,7 @@ class Hoosegow
     #
     # Returns raw JSON string.
     def inspect_image(name)
-      @container.json.to_json
+      @container.json.to_json if @container
     end
 
   private
