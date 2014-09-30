@@ -21,6 +21,7 @@ Gem::Specification.new do |s|
   s.files       = Dir[*globs]
   s.executables = ['hoosegow']
   s.homepage    = 'https://github.com/github/hoosegow'
+  s.required_ruby_version = ">= 1.9.3"
   s.add_development_dependency 'rspec', '2.14.1'
   s.add_runtime_dependency     'msgpack', '>= 0.5.6', '~> 0.5'
   s.add_runtime_dependency     'yajl-ruby', '>= 1.1.0', '~> 1.1'
