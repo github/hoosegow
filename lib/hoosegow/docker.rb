@@ -8,9 +8,9 @@ class Hoosegow
   # Minimal API client for Docker, allowing attaching to container
   # stdin/stdout/stderr.
   class Docker
-    DEFAULT_HOST        = "127.0.0.1"
-    DEFAULT_PORT        = 4243
-    DEFAULT_SOCKET_PATH = "/var/run/docker.sock"
+    DEFAULT_HOST   = "127.0.0.1"
+    DEFAULT_PORT   = 4243
+    DEFAULT_SOCKET = "/var/run/docker.sock"
 
     # Initialize a new Docker API client.
     #
@@ -180,7 +180,7 @@ class Hoosegow
         port = options[:port] || DEFAULT_PORT
         "tcp://#{host}:#{port}"
       else
-        path = options[:socket] || DEFAULT_SOCKET_PATH
+        path = options[:socket] || DEFAULT_SOCKET
         "unix://#{path}"
       end
     end
