@@ -160,7 +160,8 @@ class Hoosegow
     #
     # name - The name of the image to get info about.
     #
-    # Returns raw JSON string.
+    # Returns Hash or raises ::Docker::Error::NotFoundError if the image doesn't
+    # exist.
     def inspect_image(name)
       ::Docker::Image.get(name).info
     end
