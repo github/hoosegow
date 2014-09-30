@@ -25,4 +25,4 @@ PLATFORMS
 
 DEPENDENCIES
   hoosegow!
-  rspec
+  rspec (= 2.14.1)
