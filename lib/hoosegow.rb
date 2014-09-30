@@ -121,9 +121,9 @@ class Hoosegow
   #
   # Returns true/false.
   def image_exists?
-    Yajl.load docker.inspect_image(image_name)
+    docker.inspect_image(image_name)
     true
-  rescue Yajl::ParseError
+  rescue ::Docker::Error::NotFoundError
     false
   end
 

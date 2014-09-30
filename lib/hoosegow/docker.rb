@@ -159,7 +159,7 @@ class Hoosegow
     #
     # Returns raw JSON string.
     def inspect_image(name)
-      @container.json.to_json if @container
+      ::Docker::Image.get(name).info
     end
 
   private
