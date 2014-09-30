@@ -23,6 +23,18 @@ describe Hoosegow, "render_*" do
     hoosegow.render_reverse("foobar").should eq("not raboof")
     hoosegow.cleanup
   end
+
+  context "image_exists?" do
+    it "returns true for existing images" do
+      hoosegow = Hoosegow.new CONFIG
+      expect(hoosegow.image_exists?).to eq(true)
+    end
+
+    it "returns false for images that don't exist" do
+      hoosegow = Hoosegow.new CONFIG.merge(:image_name => "not_there")
+      expect(hoosegow.image_exists?).to eq(false)
+    end
+  end
 end
 
 
