@@ -78,7 +78,7 @@ class Hoosegow
         :Volumes   => volumes_for_create,
         :Image     => image
       )
-      callback @after_create, @container.info
+      callback @after_create
     end
 
     # Public: Create and start a Docker container.
@@ -88,7 +88,7 @@ class Hoosegow
     # Returns nothing.
     def start_container(image)
       @container.start :Binds => volumes_for_bind
-      callback @after_start, @container.info
+      callback @after_start
     end
 
     # Attach to a container, writing data to container's STDIN.
@@ -104,7 +104,7 @@ class Hoosegow
     # Returns nothing.
     def wait_container
       @container.wait
-      callback @after_stop, @container.info
+      callback @after_stop
     end
 
     # Public: Stop the running container.
@@ -113,7 +113,7 @@ class Hoosegow
     def stop_container
       return unless @container
       @container.stop :timeout => 0
-      callback @after_stop, @container.info
+      callback @after_stop
     end
 
     # Public: Delete the last started container.
@@ -223,8 +223,8 @@ class Hoosegow
       end
     end
 
-    def callback(callback_proc, *args)
-      callback_proc.call(*args) if callback_proc
+    def callback(callback_proc)
+      callback_proc.call(@container.info) if callback_proc
     rescue Object
     end
   end
