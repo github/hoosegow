@@ -1,9 +1,9 @@
 PATH
   remote: .
   specs:
-    hoosegow (0.2.1)
-      msgpack
-      yajl-ruby
+    hoosegow (1.0.1)
+      msgpack (~> 0.5, >= 0.5.6)
+      yajl-ruby (~> 1.1, >= 1.1.0)
 
 GEM
   remote: https://rubygems.org/
@@ -25,4 +25,4 @@ PLATFORMS
 
 DEPENDENCIES
   hoosegow!
-  rspec
+  rspec (= 2.14.1)
