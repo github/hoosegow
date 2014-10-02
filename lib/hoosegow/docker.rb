@@ -156,14 +156,13 @@ class Hoosegow
       ret
     end
 
-    # Get information about an image.
+    # Check if a Docker image exists.
     #
-    # name - The name of the image to get info about.
+    # name - The name of the image to check for.
     #
-    # Returns Hash or raises ::Docker::Error::NotFoundError if the image doesn't
-    # exist.
-    def inspect_image(name)
-      ::Docker::Image.get(name).info
+    # Returns true/false.
+    def image_exist?(name)
+      ::Docker::Image.image_exist? name
     end
 
   private

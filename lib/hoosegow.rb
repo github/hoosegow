@@ -121,10 +121,7 @@ class Hoosegow
   #
   # Returns true/false.
   def image_exists?
-    docker.inspect_image(image_name)
-    true
-  rescue ::Docker::Error::NotFoundError
-    false
+    docker.image_exist? image_name
   end
 
   # Public: Build a Docker image from the Dockerfile in the root directory of
