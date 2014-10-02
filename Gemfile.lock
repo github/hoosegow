@@ -2,16 +2,16 @@ PATH
   remote: .
   specs:
     hoosegow (1.0.1)
-      docker-api (~> 1.13.4)
-      msgpack
-      yajl-ruby
+      docker-api (~> 1.13.5)
+      msgpack (~> 0.5, >= 0.5.6)
+      yajl-ruby (~> 1.1, >= 1.1.0)
 
 GEM
   remote: https://rubygems.org/
   specs:
     archive-tar-minitar (0.5.2)
     diff-lcs (1.2.4)
-    docker-api (1.13.4)
+    docker-api (1.13.6)
       archive-tar-minitar
       excon (>= 0.38.0)
       json
@@ -35,4 +35,4 @@ PLATFORMS
 DEPENDENCIES
   hoosegow!
   rake
-  rspec
+  rspec (= 2.14.1)
