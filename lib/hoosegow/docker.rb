@@ -1,7 +1,6 @@
-require 'net/http'
-require 'socket'
 require 'yajl'
-require 'uri'
+require 'docker'
+require 'stringio'
 
 require_relative 'exceptions'
 
@@ -9,7 +8,9 @@ class Hoosegow
   # Minimal API client for Docker, allowing attaching to container
   # stdin/stdout/stderr.
   class Docker
-    HEADERS = {"Content-Type" => "application/json"}
+    DEFAULT_HOST   = "127.0.0.1"
+    DEFAULT_PORT   = 4243
+    DEFAULT_SOCKET = "/var/run/docker.sock"
 
     # Initialize a new Docker API client.
     #
@@ -35,18 +36,13 @@ class Hoosegow
     #           :Other - any option with a capitalized key will be passed on
     #                    to the 'create container' call. See http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.9/#create-a-container
     def initialize(options = {})
-      if options[:host] || options[:port]
-        @host   = options[:host] || "127.0.0.1"
-        @port   = options[:port] || 4243
-      else
-        @socket_path = options[:socket] || "/var/run/docker.sock"
-      end
-      @after_create = options[:after_create]
-      @after_start  = options[:after_start]
-      @after_stop   = options[:after_stop]
-      @prestart = options.fetch(:prestart, true)
-      @volumes  = options.fetch(:volumes, nil)
-      @container_options = options.each_with_object({}) { |(name, value), h| h[name.to_s] = value if name.to_s =~ /\A[A-Z]/ }
+      ::Docker.url       = docker_url options
+      @after_create      = options[:after_create]
+      @after_start       = options[:after_start]
+      @after_stop        = options[:after_stop]
+      @volumes           = options[:volumes]
+      @prestart          = options.fetch(:prestart, true)
+      @container_options = options.select { |k,v| k =~ /\A[A-Z]/ }
     end
 
     # Public: Create and start a Docker container if one hasn't been started
@@ -57,69 +53,78 @@ class Hoosegow
     #
     # Returns the data from the container's stdout.
     def run_container(image, data, &block)
-      start_container(image) unless @prestart && @id
+      unless @prestart && @container
+        create_container(image)
+        start_container
+      end
+
       begin
         attach_container(data, &block)
       ensure
         wait_container
         delete_container
-        start_container(image) if @prestart
+        if @prestart
+          create_container(image)
+          start_container
+        end
       end
       nil
     end
 
-    # Public: Create and start a Docker container.
+    # Public: Create a container using the specified image.
     #
-    # image_name - The name of the image to start the container with.
+    # image - The name of the image to start the container with.
     #
     # Returns nothing.
-    def start_container(image)
-      # Create container.
-      create_opts = @container_options.merge("StdinOnce" => true, "OpenStdin" => true, "Image" => image, "Volumes" => volumes_for_create)
-      create_body = Yajl.dump(create_opts)
-      res         = post uri(:create), create_body
-      @info       = Yajl.load(res)
-      @id         = @info["Id"]
-      callback @after_create, @info
+    def create_container(image)
+      @container = ::Docker::Container.create @container_options.merge(
+        :StdinOnce => true,
+        :OpenStdin => true,
+        :Volumes   => volumes_for_create,
+        :Image     => image
+      )
+      callback @after_create
+    end
 
-      # Start container
-      post uri(:start, @id), Yajl.dump(:Binds => volumes_for_bind)
-      callback @after_start, @info
+    # Public: Start a Docker container.
+    #
+    # Returns nothing.
+    def start_container
+      @container.start :Binds => volumes_for_bind
+      callback @after_start
     end
 
     # Attach to a container, writing data to container's STDIN.
     #
     # Returns combined STDOUT/STDERR from container.
     def attach_container(data, &block)
-      params  = {:stdout => 1, :stderr => 1, :stdin => 1, :logs => 0, :stream => 1}
-      request = Net::HTTP::Post.new uri(:attach, @id, params), HEADERS
-      transport_request request, data, &block
+      stdin = StringIO.new data
+      @container.attach :stdin => stdin, &block
     end
 
     # Public: Wait for a container to finish.
     #
     # Returns nothing.
     def wait_container
-      post uri(:wait, @id)
-      callback @after_stop, @info
+      @container.wait
+      callback @after_stop
     end
 
     # Public: Stop the running container.
     #
     # Returns response body or nil if no container is running.
     def stop_container
-      return unless @id
-      post uri(:stop, @id, :t => 0)
-      callback @after_stop, @info
+      return unless @container
+      @container.stop :timeout => 0
+      callback @after_stop
     end
 
     # Public: Delete the last started container.
     #
     # Returns response body or nil if no container was started.
     def delete_container
-      return unless @id
-      delete = Net::HTTP::Delete.new uri(:delete, @id), HEADERS
-      transport_request delete
+      return unless @container
+      @container.delete
     end
 
     # Public: Build a new image.
@@ -139,9 +144,9 @@ class Hoosegow
         yield obj if block_given?
       end
 
-      # Make API call and feed chunks to parser.
-      build_uri = uri(:build, :t => name, :rm => '1')
-      post build_uri, tarfile do |chunk|
+      # Make API call to create image.
+      opts = {:t => name, :rm => '1'}
+      ::Docker::Image.build_from_tar StringIO.new(tarfile), opts do |chunk|
         parser << chunk
       end
 
@@ -151,105 +156,36 @@ class Hoosegow
       ret
     end
 
-    # Get information about an image.
+    # Check if a Docker image exists.
     #
-    # name - The name of the image to get info about.
+    # name - The name of the image to check for.
     #
-    # Returns raw response string.
-    def inspect_image(name)
-      get uri(:inspect, name)
+    # Returns true/false.
+    def image_exist?(name)
+      ::Docker::Image.exist? name
     end
 
   private
-
-    # Private: Send a GET request to the API.
+    # Private: Get the URL to use for communicating with Docker. If a host and/or
+    # port a present, a TCP socket URL will be generated. Otherwise a Unix
+    # socket will be used.
     #
-    # uri - API URI to GET to.
+    # options - A Hash of options for building the URL.
+    #           :host   - The hostname or IP of a remote Docker daemon
+    #                     (optional).
+    #           :port   - The TCP port of the remote Docker daemon (optional).
+    #           :socket - The path of a local Unix socket (optional).
     #
-    # Returns the response body.
-    def get(uri)
-      request = Net::HTTP::Get.new uri
-      transport_request request
-    end
-
-    # Private: Send a POST request to the API.
-    #
-    # uri    - API URI to POST to.
-    # data   - Data for POST body.
-    #
-    # Returns the response body.
-    def post(uri, data = '{}', &block)
-      request = Net::HTTP::Post.new uri, HEADERS
-      request.body = data
-      transport_request request, &block
-    end
-
-    # Private: Connects to API host or local socket, transmits the request, and
-    # reads in the response.
-    #
-    # request - A Net::HTTPResponse object without a body set.
-    #
-    # Returns the response body.
-    def transport_request(request, data = nil)
-      request = request
-      socket  = new_socket
-      request.exec socket, "1.1", request.path
-
-      begin
-        response = Net::HTTPResponse.read_new(socket)
-      end while response.kind_of?(Net::HTTPContinue)
-
-      socket.write(data) if data
-      response.reading_body(socket, request.response_body_permitted?) do
-        if block_given?
-          response.read_body do |segment|
-            yield segment
-          end
-        end
+    # Returns a String url.
+    def docker_url(options)
+      if options[:host] || options[:port]
+        host = options[:host] || DEFAULT_HOST
+        port = options[:port] || DEFAULT_PORT
+        "tcp://#{host}:#{port}"
+      else
+        path = options[:socket] || DEFAULT_SOCKET
+        "unix://#{path}"
       end
-      response.body
-    end
-
-    # Private: Create a connection to API host or local Unix socket.
-    #
-    # Returns Net::BufferedIO socket object.
-    def new_socket
-      socket = if @socket_path
-                 UNIXSocket.new(@socket_path)
-               else
-                 TCPSocket.open @host, @port
-               end
-      socket = Net::BufferedIO.new socket
-      socket.read_timeout = nil
-      socket
-    end
-
-    API_PATHS = {
-      :create  => "/containers/create",
-      :attach  => "/containers/%s/attach",
-      :start   => "/containers/%s/start",
-      :stop    => "/containers/%s/stop",
-      :wait    => "/containers/%s/wait",
-      :delete  => "/containers/%s",
-      :build   => "/build",
-      :inspect => "/images/%s/json"
-    }
-
-    # Private: Build a URI for a given API endpount, encorporating any
-    # arguments or parameters.
-    #
-    # endpoint - The Symbol name for an API endpoint (:create, :attach, :start,
-    #            :stop, :wait, :delete, :build).
-    # *args    - Any arguments for building the URI (container ID). If the last
-    #            argument is a hash, it will be used to populate the query
-    #            portion of the URI.
-    #
-    # Returns a URI string.
-    def uri(endpoint, *args)
-      query = URI.encode_www_form( args.last.is_a?(Hash) ? args.pop : {} )
-      path  = sprintf API_PATHS[endpoint], *args
-
-      URI::HTTP.build(:path => path, :query => query).request_uri
     end
 
     # Private: Generate the `Volumes` argument for creating a container.
@@ -290,8 +226,8 @@ class Hoosegow
       end
     end
 
-    def callback(callback_proc, *args)
-      callback_proc.call(*args) if callback_proc
+    def callback(callback_proc)
+      callback_proc.call(@container.info) if callback_proc
     rescue Object
     end
   end

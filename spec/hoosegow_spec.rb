@@ -10,18 +10,32 @@ end
 CONFIG.merge! :inmate_dir => File.join(File.dirname(__FILE__), 'test_inmate')
 
 
-describe Hoosegow, "render_*" do
-  it "runs directly if in docker" do
-    hoosegow = Hoosegow.new CONFIG.merge(:no_proxy => true)
-    hoosegow.stub :proxy_send => "not raboof"
-    hoosegow.render_reverse("foobar").should eq("raboof")
+describe Hoosegow do
+  context "no_proxy option" do
+    it "runs directly if set" do
+      hoosegow = Hoosegow.new CONFIG.merge(:no_proxy => true)
+      hoosegow.stub :proxy_send => "not raboof"
+      hoosegow.render_reverse("foobar").should eq("raboof")
+    end
+
+    it "runs via proxy if not set" do
+      hoosegow = Hoosegow.new CONFIG
+      hoosegow.stub :proxy_send => "not raboof"
+      hoosegow.render_reverse("foobar").should eq("not raboof")
+      hoosegow.cleanup
+    end
   end
 
-  it "runs via proxy if not in docker" do
-    hoosegow = Hoosegow.new CONFIG
-    hoosegow.stub :proxy_send => "not raboof"
-    hoosegow.render_reverse("foobar").should eq("not raboof")
-    hoosegow.cleanup
+  context "image_exists?" do
+    it "returns true for existing images" do
+      hoosegow = Hoosegow.new CONFIG
+      expect(hoosegow.image_exists?).to eq(true)
+    end
+
+    it "returns false for images that don't exist" do
+      hoosegow = Hoosegow.new CONFIG.merge(:image_name => "not_there")
+      expect(hoosegow.image_exists?).to eq(false)
+    end
   end
 end
 
@@ -31,54 +45,55 @@ describe Hoosegow::Protocol::Proxy do
   let(:block) { double('block') }
   let(:stdout) { double('stdout') }
   let(:stderr) { double('stderr') }
+
   it "encodes the method call" do
     expect(MessagePack.unpack(proxy.encode_send(:method_name, ["arg1", {:name => 'value'}]))).to eq(['method_name', ["arg1", {'name' => 'value'}]])
   end
+
   it "decodes a yield" do
     block.should_receive(:call).with('a', 'b')
-    proxy.receive(docker_stdout(MessagePack.pack([:yield, ['a', 'b']])))
+    proxy.receive(:stdout, MessagePack.pack([:yield, ['a', 'b']]))
   end
+
   context 'with no block' do
     let(:block) { nil }
     it "decodes a yield" do
-      proxy.receive(docker_stdout(MessagePack.pack([:yield, ['a', 'b']])))
+      proxy.receive(:stdout, MessagePack.pack([:yield, ['a', 'b']]))
     end
   end
+
   it "decodes the return value" do
-    proxy.receive(docker_stdout(MessagePack.pack([:return, 1])))
+    proxy.receive(:stdout, MessagePack.pack([:return, 1]))
     expect(proxy.return_value).to eq(1)
   end
+
   it "decodes a known error class" do
-    expect { proxy.receive(docker_stdout(MessagePack.pack([:raise, {:class => 'RuntimeError', :message => 'I went boom'}]))) }.to raise_error(Hoosegow::InmateRuntimeError, "RuntimeError: I went boom")
+    expect { proxy.receive(:stdout, MessagePack.pack([:raise, {:class => 'RuntimeError', :message => 'I went boom'}])) }.to raise_error(Hoosegow::InmateRuntimeError, "RuntimeError: I went boom")
   end
+
   it "decodes an error" do
-    expect { proxy.receive(docker_stdout(MessagePack.pack([:raise, {:class => 'SomeInternalError', :message => 'I went boom'}]))) }.to raise_error(Hoosegow::InmateRuntimeError, "SomeInternalError: I went boom")
+    expect { proxy.receive(:stdout, MessagePack.pack([:raise, {:class => 'SomeInternalError', :message => 'I went boom'}])) }.to raise_error(Hoosegow::InmateRuntimeError, "SomeInternalError: I went boom")
   end
+
   it "decodes an error with a stack trace" do
-    expect { proxy.receive(docker_stdout(MessagePack.pack([:raise, {:class => 'SomeInternalError', :message => 'I went boom', :backtrace => ['file.rb:33:in `example\'']}]))) }.to raise_error(Hoosegow::InmateRuntimeError, "SomeInternalError: I went boom\nfile.rb:33:in `example'")
+    expect { proxy.receive(:stdout, MessagePack.pack([:raise, {:class => 'SomeInternalError', :message => 'I went boom', :backtrace => ['file.rb:33:in `example\'']}])) }.to raise_error(Hoosegow::InmateRuntimeError, "SomeInternalError: I went boom\nfile.rb:33:in `example'")
   end
+
   it "decodes stdout" do
     stdout.should_receive(:write).with('abc')
-    proxy.receive(docker_stdout(MessagePack.pack([:stdout, 'abc'])))
+    proxy.receive(:stdout, MessagePack.pack([:stdout, 'abc']))
   end
+
   it "decodes stderr" do
     stderr.should_receive(:write).with('abc')
-    proxy.receive(docker_stderr('abc'))
+    proxy.receive(:stderr, 'abc')
   end
+
   it "decodes the return value, across several reads" do
-    docker_stdout(MessagePack.pack([:return, :abcdefghijklmn])).each_char do |char|
-      proxy.receive(char)
+    MessagePack.pack([:return, :abcdefghijklmn]).each_char do |char|
+      proxy.receive(:stdout, char)
     end
     expect(proxy.return_value).to eq('abcdefghijklmn')
-  end
-  def docker_stdout(data)
-    docker_data(1, data)
-  end
-  def docker_stderr(data)
-    docker_data(2, data)
-  end
-  def docker_data(type, data)
-    [type, data.bytesize].pack('CxxxN') + data
   end
 end
 

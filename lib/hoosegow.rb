@@ -28,10 +28,10 @@ class Hoosegow
   #                         this if Docker is listening locally on a Unix
   #                         socket.
   def initialize(options = {})
-    options = options.dup
-    @no_proxy = options.delete(:no_proxy)
-    @inmate_dir  = options.delete(:inmate_dir) || '/hoosegow/inmate'
-    @image_name = options.delete :image_name
+    options         = options.dup
+    @no_proxy       = options.delete(:no_proxy)
+    @inmate_dir     = options.delete(:inmate_dir) || '/hoosegow/inmate'
+    @image_name     = options.delete(:image_name)
     @docker_options = options
     load_inmate_methods
 
@@ -55,16 +55,24 @@ class Hoosegow
 
   # Public: Proxies method call to instance running in a Docker container.
   #
-  # name - The method to call in the Docker instance.
-  # args - Arguments that should be passed to the Docker instance method.
+  # name  - The method to call in the Docker instance.
+  # args  - Arguments that should be passed to the Docker instance method.
   # block - A block that can be yielded to.
   #
   # See docs/dispatch.md for more information.
   #
   # Returns the return value from the Docker instance method.
   def proxy_send(name, args, &block)
-    proxy = Hoosegow::Protocol::Proxy.new(:stdout => $stdout, :stderr => $stderr, :yield => block)
-    docker.run_container(image_name, proxy.encode_send(name, args)) { |message| proxy.receive(message) }
+    proxy = Hoosegow::Protocol::Proxy.new(
+      :stdout => $stdout,
+      :stderr => $stderr,
+      :yield  => block
+    )
+    encoded_send = proxy.encode_send(name, args)
+    docker.run_container(image_name, encoded_send) do |type, msg|
+      proxy.receive(type, msg)
+    end
+
     proxy.return_value
   end
 
@@ -113,10 +121,7 @@ class Hoosegow
   #
   # Returns true/false.
   def image_exists?
-    Yajl.load docker.inspect_image(image_name)
-    true
-  rescue Yajl::ParseError
-    false
+    docker.image_exist? image_name
   end
 
   # Public: Build a Docker image from the Dockerfile in the root directory of

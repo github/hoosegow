@@ -27,36 +27,25 @@ class Hoosegow
       attr_reader :return_value
 
       # Decodes a message from an inmate via docker.
-      def receive(data)
-        data = (@buffer || '') + data
-        while data.size >= 8
-          header = data.slice!(0,8)
-          docker_type, length = header.unpack('CxxxN')
-          if data.bytesize < length
-            data = header + data
-            break
-          end
-          docker_message = data.slice!(0, length)
-          if docker_type == 1
-            @unpacker ||= MessagePack::Unpacker.new
-            @unpacker.feed_each(docker_message) do |decoded|
-              inmate_type, inmate_value = decoded
-              case inmate_type.to_s
-              when 'yield'
-                @yield_block.call(*inmate_value) if @yield_block
-              when 'return'
-                @return_value = inmate_value
-              when 'raise'
-                raise(*raise_args(inmate_value))
-              when 'stdout'
-                @stdout.write(inmate_value)
-              end
+      def receive(type, msg)
+        if type == :stdout
+          @unpacker ||= MessagePack::Unpacker.new
+          @unpacker.feed_each(msg) do |decoded|
+            inmate_type, inmate_value = decoded
+            case inmate_type.to_s
+            when 'yield'
+              @yield_block.call(*inmate_value) if @yield_block
+            when 'return'
+              @return_value = inmate_value
+            when 'raise'
+              raise(*raise_args(inmate_value))
+            when 'stdout'
+              @stdout.write(inmate_value)
             end
-          elsif docker_type == 2
-            @stderr.write(docker_message)
           end
+        elsif type == :stderr
+          @stderr.write(msg)
         end
-        @buffer = data
       end
 
       def raise_args(remote_error)
