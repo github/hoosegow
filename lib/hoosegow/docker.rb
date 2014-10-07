@@ -162,7 +162,7 @@ class Hoosegow
     #
     # Returns true/false.
     def image_exist?(name)
-      ::Docker::Image.image_exist? name
+      ::Docker::Image.exist? name
     end
 
   private

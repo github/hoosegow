@@ -91,15 +91,15 @@ describe Hoosegow::Docker do
     end
   end
 
-  context "inspect_image" do
-    it "returns a hash of info about the image if it exists" do
+  context "image_exist?" do
+    it "returns true if the image exists" do
       docker = Hoosegow::Docker.new CONFIG
-      expect(docker.inspect_image(CONFIG[:image_name])).to be_instance_of(Hash)
+      expect(docker.image_exist?(CONFIG[:image_name])).to eq(true)
     end
 
-    it "raises ::Docker::Error::NotFoundError if the image doesn't exist" do
+    it "returns false if the image doesn't exist" do
       docker = Hoosegow::Docker.new CONFIG
-      expect { docker.inspect_image("not_there") }.to raise_error(::Docker::Error::NotFoundError)
+      expect(docker.image_exist?("not_there")).to eq(false)
     end
   end
 end
