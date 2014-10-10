@@ -1,12 +1,16 @@
-require_relative '../lib/hoosegow/docker'
+require_relative '../lib/hoosegow'
 
-begin
-  require_relative '../config'
-rescue LoadError
-  CONFIG = {}
+unless defined?(CONFIG)
+  begin
+    require_relative '../config'
+  rescue LoadError
+    CONFIG = {}
+  end
 end
 
-CONFIG.merge! :inmate_dir => File.join(File.dirname(__FILE__), 'test_inmate')
+inmate_dir = File.join(File.dirname(__FILE__), 'test_inmate')
+CONFIG[:inmate_dir] = inmate_dir
+CONFIG[:image_name] ||= Hoosegow.new(CONFIG).image_name
 
 describe Hoosegow::Docker do
   context 'volumes' do

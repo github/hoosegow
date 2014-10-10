@@ -3,13 +3,14 @@ require_relative 'lib/hoosegow'
 require 'rspec/core/rake_task'
 
 begin
-	require_relative 'config'
+  require_relative 'config'
 rescue LoadError
-	CONFIG = {}
+  CONFIG = {}
 end
 
 inmate_dir = File.join(File.dirname(__FILE__), 'spec', 'test_inmate')
-CONFIG.merge! :inmate_dir => inmate_dir
+CONFIG[:inmate_dir] = inmate_dir
+CONFIG[:image_name] = Hoosegow.new(CONFIG).image_name
 
 RSpec::Core::RakeTask.new(:spec)
 Rake::Task[:spec].prerequisites << :bootstrap_docker

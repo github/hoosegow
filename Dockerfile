@@ -15,15 +15,14 @@ RUN echo 'eval "$(rbenv init -)"'          >> /etc/profile
 RUN mkdir -p /.rbenv/plugins
 RUN git clone https://github.com/sstephenson/ruby-build.git /.rbenv/plugins/ruby-build
 
-# Install 1.9.3
-RUN /bin/bash -l -c 'rbenv install 1.9.3-p448'
-RUN /bin/bash -l -c 'rbenv global 1.9.3-p448'
+# Install 2.1.3
+RUN /bin/bash -l -c 'rbenv install 2.1.3'
+RUN /bin/bash -l -c 'rbenv global 2.1.3'
 RUN /bin/bash -l -c 'gem install bundler'
 RUN /bin/bash -l -c 'rbenv rehash'
 
-# Run all commands in /hoosegow
-RUN mkdir /hoosegow
-WORKDIR /hoosegow
+# Create a user to run as.
+RUN adduser --no-create-home --disabled-password --gecos "" --shell /bin/false hoosegow
 
 ###########################################################################################
 # Anything added after the ADD command will not be cached. Try to add changes above here. #
@@ -31,9 +30,16 @@ WORKDIR /hoosegow
 
 # Add this directory to /
 ADD . /hoosegow
+RUN chown -R hoosegow:hoosegow /hoosegow
+
+# Switch to limited user now.
+USER hoosegow
+
+# Run all commands in /hoosegow
+WORKDIR /hoosegow
 
 # Bundle hoosegow
-RUN /bin/bash -l -c 'bundle install'
+RUN /bin/bash -l -c 'BUNDLE_JOBS=4 bundle install --path .bundle --without development test'
 
 # Command to run when `docker run hoosegow`
 ENTRYPOINT /bin/bash -l -c bin/hoosegow
