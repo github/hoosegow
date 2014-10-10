@@ -3,13 +3,9 @@ require_relative 'lib/hoosegow'
 require 'rspec/core/rake_task'
 
 begin
-	require_relative 'config'
+  require_relative 'config'
 rescue LoadError
-	CONFIG = {}
-end
-
-def hoosegow
-	@hoosgow ||= Hoosegow.new CONFIG
+  CONFIG = {}
 end
 
 inmate_dir = File.join(File.dirname(__FILE__), 'spec', 'test_inmate')
@@ -19,6 +15,10 @@ CONFIG[:image_name] = Hoosegow.new(CONFIG).image_name
 RSpec::Core::RakeTask.new(:spec)
 Rake::Task[:spec].prerequisites << :bootstrap_docker
 task :default => :spec
+
+def hoosegow
+  @hoosgow ||= Hoosegow.new CONFIG
+end
 
 desc "Benchmark render_reverse run in docker"
 task :benchmark => :bootstrap_docker do
