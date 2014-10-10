@@ -34,5 +34,5 @@ PLATFORMS
 
 DEPENDENCIES
   hoosegow!
-  rake
+  rake (~> 10.3, >= 10.3.2)
   rspec (~> 2.14, >= 2.14.1)

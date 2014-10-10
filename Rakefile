@@ -8,13 +8,13 @@ rescue LoadError
 	CONFIG = {}
 end
 
-inmate_dir = File.join(File.dirname(__FILE__), 'spec', 'test_inmate')
-CONFIG[:inmate_dir] = inmate_dir
-CONFIG[:image_name] = Hoosegow.new(CONFIG).image_name
-
 def hoosegow
 	@hoosgow ||= Hoosegow.new CONFIG
 end
+
+inmate_dir = File.join(File.dirname(__FILE__), 'spec', 'test_inmate')
+CONFIG[:inmate_dir] = inmate_dir
+CONFIG[:image_name] = Hoosegow.new(CONFIG).image_name
 
 RSpec::Core::RakeTask.new(:spec)
 Rake::Task[:spec].prerequisites << :bootstrap_docker
