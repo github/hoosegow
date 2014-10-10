@@ -2,11 +2,11 @@
 
 Ephemeral Docker jails for running untrusted Ruby code.
 
-Hoowgow runs both in your code and in a Docker container. When you call a method on a Hoosegow instance, it proxies the method call to another instance of Hoosegow running inside a Docker container.
+Hoosegow runs both in your code and in a Docker container. When you call a method on a Hoosegow instance, it proxies the method call to another instance of Hoosegow running inside a Docker container.
 
 # Security
 
-Hoosegow is intended to add a layer of security to projects that need to run untrusted code. Because the untrusted code is running inside a Docker container, an attacker who manages to exploit a vulnerability in the code must also break out of the Docker container before gaining any access to the host system.
+Hoosegow is intended to add a layer of security to projects that need to run code that is not fully trusted/audited. Because the untrusted code is running inside a Docker container, an attacker who manages to exploit a vulnerability in the code must also break out of the Docker container before gaining any access to the host system.
 
 This means that Hoosegow is only as strong as Docker. Docker employs Kernel namespaces, capabilities, and cgroups to contain processes running inside a container. This is not true Virtualization though, and a process running as root inside the container *can* compromise the host system. Further hardening of the base Ubuntu image, along with tools like AppArmor or SE-Linux could improve the security posture of an application relying on Hoosegow/Docker.
 
