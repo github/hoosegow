@@ -9,15 +9,16 @@ rescue LoadError
 end
 
 inmate_dir = File.join(File.dirname(__FILE__), 'spec', 'test_inmate')
-CONFIG.merge! :inmate_dir => inmate_dir
+CONFIG[:inmate_dir] = inmate_dir
+CONFIG[:image_name] = Hoosegow.new(CONFIG).image_name
+
+def hoosegow
+	@hoosgow ||= Hoosegow.new CONFIG
+end
 
 RSpec::Core::RakeTask.new(:spec)
 Rake::Task[:spec].prerequisites << :bootstrap_docker
 task :default => :spec
-
-def hoosegow
-  @hoosgow ||= Hoosegow.new CONFIG
-end
 
 desc "Benchmark render_reverse run in docker"
 task :benchmark => :bootstrap_docker do
