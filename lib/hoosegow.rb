@@ -3,8 +3,6 @@ require_relative 'hoosegow/exceptions'
 require_relative 'hoosegow/image_bundle'
 require_relative 'hoosegow/protocol'
 
-require 'msgpack'
-
 class Hoosegow
   # Public: Initialize a Hoosegow instance.
   #
