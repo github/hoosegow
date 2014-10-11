@@ -2,7 +2,7 @@ title Hoosegow method dispatch
 
 App->Hoosegow: do_work(args)
 Hoosegow->Docker: start and attach to instance
-Hoosegow->bin/hoosegow: stdin: msgpack(:do_sandboxed_work, args)
+Hoosegow->bin/hoosegow: stdin: msgpack(:do_work, args)
 bin/hoosegow->Inmate: send(:do_work, args)
 Inmate->bin/hoosegow: yield("message")
 bin/hoosegow->Hoosegow: stdout: msgpack(:yield, "message")
