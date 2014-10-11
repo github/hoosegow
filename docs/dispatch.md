@@ -2,42 +2,17 @@
 
 Calling a method on an inmate involves passing information through several layers. The participants in the flow are:
 
-* **Proxy** - Outside a docker container, the app calls a method on a `Hoosegow` instance. The `Hoosegow` object acts as a proxy for another `Hoosegow` instance running inside a docker container.
-* **Docker** - The caller makes an HTTP POST request to docker to attach to a container. The body of the request contains `STDIN` for the process. Docker multiplexes `STDOUT` and `STDERR` in the response body.
-* **bin/hoosegow** - This is the script that receives `STDIN` and produces `STDOUT` and `STDERR`.
-* **Inmate** - Inside the docker container, the inmate code receives a method call.
+* **App** - your app's code, outside of the container.
+* **Hoosegow** - an instance of the `Hoosegow` class, created outside the container.
+* **Docker** - the docker daemon.
+* **`bin/hoosegow`** - the entry point in the docker container.
+* **Inmate** - an instance of the `Hoosegow` class, inside the container, that has included `Hoosegow::Inmate` (your sandboxed code).
 
-```
- Proxy                  Docker        bin/hoosegow                 Inmate
-
-   |                      |                 |                        |
-   | HTTP POST /attach    |                 |                        |
-   |--------------------->|                 |                        |
-   | msgpack(method,args) |---------------->|                        |
-   |                      | stdin           |                        |
-   |                      |                 | send(method,args,&blk) |
-   |                      |                 |----------------------->|
-   |                      |                 |                        |
-   |                      |                 |                        |
-   |                      |                 |<-----------------------|
-   |                      |                 | result,                |
-   |                      |                 | blk.call(),            |
-   |                      |                 | stdout,                |
-   |                      |                 | stderr                 |
-   |                      |                 |                        |
-   |                      |                 |                        |
-   |                      |<----------------|                        |
-   |                      | stderr,         |                        |
-   | 200 OK               | stdout=encode(  |                        |
-   |<---------------------|   stdout,       |                        |
-   | multiplex(stdout,    |   callbacks,    |                        |
-   |   stderr)            |   result)       |                        |
-   |                      |                 |                        |
-```
+![](dispatch.png)
 
 ## Interfaces
 
-### Proxy
+### Hoosegow (outside the container)
 
 The outer instance of `Hoosegow` receives a normal call from the application.
 
