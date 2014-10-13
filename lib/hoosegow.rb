@@ -7,29 +7,33 @@ class Hoosegow
   # Public: Initialize a Hoosegow instance.
   #
   # options -
-  #           :no_proxy   - Development mode. Use this if you don't want to
-  #                         setup Docker on your development instance, but
-  #                         still need to test rendering files. This is how
-  #                         Hoosegow runs inside the Docker container.
-  #           :inmate_dir - Dependency directory to be coppied to the hoosegow
-  #                         image. This should include a file called
-  #                         `inmate.rb` that defines a Hoosegow::Inmate module.
-  #           :image_name - The name of the Docker image to use. If this isn't
-  #                         specified, we will infer the image name from the
-  #                         hash the files present.
-  #           :socket     - Path to Unix socket where Docker daemon is running.
-  #                         (optional. defaults to "/var/run/docker.sock")
-  #           :host       - IP or hostname where Docker daemon is running.
-  #                         Don't set this if Docker is listening locally on a
-  #                         Unix socket.
-  #           :port       - TCP port where Docker daemon is running. Don't set
-  #                         this if Docker is listening locally on a Unix
-  #                         socket.
+  #           :no_proxy     - Development mode. Use this if you don't want to
+  #                           setup Docker on your development instance, but
+  #                           still need to test rendering files. This is how
+  #                           Hoosegow runs inside the Docker container.
+  #           :inmate_dir   - Dependency directory to be coppied to the hoosegow
+  #                           image. This should include a file called
+  #                          `inmate.rb` that defines a Hoosegow::Inmate module.
+  #           :image_name   - The name of the Docker image to use. If this isn't
+  #                           specified, we will infer the image name from the
+  #                           hash the files present.
+  #           :ruby_version - The Ruby version to install in the Docker
+  #                           container (Default RUBY_VERSION).
+  #           :socket       - Path to Unix socket where Docker daemon is
+  #                           running. (optional. defaults to
+  #                           "/var/run/docker.sock")
+  #           :host         - IP or hostname where Docker daemon is running.
+  #                           Don't set this if Docker is listening locally on a
+  #                           Unix socket.
+  #           :port         - TCP port where Docker daemon is running. Don't set
+  #                           this if Docker is listening locally on a Unix
+  #                           socket.
   def initialize(options = {})
     options         = options.dup
     @no_proxy       = options.delete(:no_proxy)
     @inmate_dir     = options.delete(:inmate_dir) || '/hoosegow/inmate'
     @image_name     = options.delete(:image_name)
+    @ruby_version   = options.delete(:ruby_version) || RUBY_VERSION
     @docker_options = options
     load_inmate_methods
 
@@ -48,6 +52,7 @@ class Hoosegow
       Hoosegow::ImageBundle.new.tap do |image|
         image.add(File.expand_path('../../*', __FILE__), :ignore_hidden => true)
         image.add(File.join(@inmate_dir, "*"), :prefix => 'inmate')
+        image.ruby_version = @ruby_version
       end
   end
 
