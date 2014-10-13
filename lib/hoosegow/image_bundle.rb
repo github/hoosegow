@@ -5,6 +5,9 @@ class Hoosegow
     # Public: The source for the Dockerfile. Defaults to Dockerfile in the hoosegow gem.
     attr_accessor :dockerfile
 
+    # Public: The ruby version to install on the container.
+    attr_accessor :ruby_version
+
     # Public: Include files in the bundle.
     #
     # To add all files in "root" to the root of the bundle:
@@ -62,8 +65,13 @@ class Hoosegow
           end
         end
 
+        # Specify the correct ruby version in the Dockerfile.
+        bundle_dockerfile = File.join(tmpdir, "Dockerfile")
+        content = IO.read(bundle_dockerfile)
+        content = content.gsub("{{ruby_version}}", ruby_version)
+        IO.write bundle_dockerfile, content
+
         if dockerfile
-          bundle_dockerfile = File.join(tmpdir, "Dockerfile")
           File.unlink bundle_dockerfile
           FileUtils.cp dockerfile, bundle_dockerfile
         end

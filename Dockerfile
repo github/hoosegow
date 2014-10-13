@@ -15,9 +15,9 @@ RUN echo 'eval "$(rbenv init -)"'          >> /etc/profile
 RUN mkdir -p /.rbenv/plugins
 RUN git clone https://github.com/sstephenson/ruby-build.git /.rbenv/plugins/ruby-build
 
-# Install 2.1.3
-RUN /bin/bash -l -c 'rbenv install 2.1.3'
-RUN /bin/bash -l -c 'rbenv global 2.1.3'
+# Install specified ruby version
+RUN /bin/bash -l -c 'rbenv install {{ruby_version}}'
+RUN /bin/bash -l -c 'rbenv global {{ruby_version}}'
 RUN /bin/bash -l -c 'gem install bundler'
 RUN /bin/bash -l -c 'rbenv rehash'
 

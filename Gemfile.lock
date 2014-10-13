@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    hoosegow (1.1.0)
+    hoosegow (1.2.0)
       docker-api (~> 1.13.6)
       msgpack (~> 0.5, >= 0.5.6)
       yajl-ruby (~> 1.1, >= 1.1.0)
