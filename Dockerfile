@@ -10,13 +10,14 @@ RUN git clone https://github.com/sstephenson/rbenv.git /.rbenv
 RUN echo 'export PATH="/.rbenv/bin:$PATH"' >> /etc/profile
 RUN echo 'export RBENV_ROOT="/.rbenv"'     >> /etc/profile
 RUN echo 'eval "$(rbenv init -)"'          >> /etc/profile
+RUN echo 'gem: --no-rdoc --no-ri'          >> /etc/gemrc
 
 # Install rbenv build plugin
 RUN mkdir -p /.rbenv/plugins
 RUN git clone https://github.com/sstephenson/ruby-build.git /.rbenv/plugins/ruby-build
 
 # Install specified ruby version
-RUN /bin/bash -l -c 'rbenv install {{ruby_version}}'
+RUN /bin/bash -l -c 'RUBY_CONFIGURE_OPTS="--disable-install-doc" rbenv install {{ruby_version}}'
 RUN /bin/bash -l -c 'rbenv global {{ruby_version}}'
 RUN /bin/bash -l -c 'gem install bundler'
 RUN /bin/bash -l -c 'rbenv rehash'

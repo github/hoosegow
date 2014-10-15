@@ -8,6 +8,8 @@ class Hoosegow
   # Minimal API client for Docker, allowing attaching to container
   # stdin/stdout/stderr.
   class Docker
+    ::Docker.options[:read_timeout]  = 3600
+    ::Docker.options[:write_timeout] = 3600
     DEFAULT_HOST   = "127.0.0.1"
     DEFAULT_PORT   = 4243
     DEFAULT_SOCKET = "/var/run/docker.sock"
