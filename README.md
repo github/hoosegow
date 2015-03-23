@@ -8,7 +8,7 @@ Hoosegow runs both in your code and in a Docker container. When you call a metho
 
 Hoosegow is intended to add a layer of security to projects that need to run code that is not fully trusted/audited. Because the untrusted code is running inside a Docker container, an attacker who manages to exploit a vulnerability in the code must also break out of the Docker container before gaining any access to the host system.
 
-This means that Hoosegow is only as strong as Docker. Docker employs Kernel namespaces, capabilities, and cgroups to contain processes running inside a container. This is not true Virtualization though, and a process running as root inside the container *can* compromise the host system. Any priviledge escalation bugs in the host Kernel could also be used to become root and compromise the host machine. Further hardening of the base Ubuntu image, along with tools like AppArmor or SE-Linux can improve the security posture of an application relying on Hoosegow/Docker.
+This means that Hoosegow is only as strong as Docker. Docker employs Kernel namespaces, capabilities, and cgroups to contain processes running inside a container. This is not true Virtualization though, and a process running as root inside the container *can* compromise the host system. Any privilege escalation bugs in the host Kernel could also be used to become root and compromise the host machine. Further hardening of the base Ubuntu image, along with tools like AppArmor or SE-Linux can improve the security posture of an application relying on Hoosegow/Docker.
 
 The following are some useful resources regarding the security of Docker:
 
