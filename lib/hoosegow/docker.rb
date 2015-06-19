@@ -38,7 +38,7 @@ class Hoosegow
     #           :Other - any option with a capitalized key will be passed on
     #                    to the 'create container' call. See http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.9/#create-a-container
     def initialize(options = {})
-      ::Docker.url       = docker_url options
+      set_docker_url! options
       @after_create      = options[:after_create]
       @after_start       = options[:after_start]
       @after_stop        = options[:after_stop]
@@ -168,6 +168,13 @@ class Hoosegow
     end
 
   private
+    # Private: Set the docker URL, if related options are present.
+    def set_docker_url!(options)
+      if url = docker_url(options)
+        ::Docker.url = url
+      end
+    end
+
     # Private: Get the URL to use for communicating with Docker. If a host and/or
     # port a present, a TCP socket URL will be generated. Otherwise a Unix
     # socket will be used.
@@ -184,9 +191,10 @@ class Hoosegow
         host = options[:host] || DEFAULT_HOST
         port = options[:port] || DEFAULT_PORT
         "tcp://#{host}:#{port}"
-      else
-        path = options[:socket] || DEFAULT_SOCKET
+      elsif path = options[:socket]
         "unix://#{path}"
+      else
+        nil
       end
     end
 
