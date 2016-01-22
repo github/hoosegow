@@ -127,6 +127,8 @@ class Hoosegow
     def delete_container
       return unless @container
       @container.delete
+    rescue ::Docker::Error::ServerError => e
+      $stderr.puts "Docker could not delete #{@container.id}: #{e}"
     end
 
     # Public: Build a new image.
