@@ -2,3 +2,6 @@ sudo: required
 services:
   - docker
 script: script/cibuild
+branches:
+  only:
+    - master
