@@ -13,6 +13,11 @@ CONFIG[:inmate_dir] = inmate_dir
 CONFIG[:image_name] ||= Hoosegow.new(CONFIG).image_name
 
 describe Hoosegow::Docker do
+  before do
+    ::Docker.url = nil
+    ::Docker.options = nil
+  end
+
   context 'volumes' do
     subject { described_class.new(:volumes => volumes) }
 
