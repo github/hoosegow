@@ -106,4 +106,26 @@ describe Hoosegow::Docker do
       expect(docker.image_exist?("not_there")).to eq(false)
     end
   end
+
+  context "delete_container" do
+    let(:docker) { Hoosegow::Docker.new CONFIG }
+    let(:container) { Object.new }
+    before do
+      docker.instance_variable_set(:@container, container)
+      allow(container).to receive(:id).and_return("1234")
+      $old_stderr = $stderr
+      $stderr = StringIO.new
+    end
+    after do
+      $stderr = $old_stderr
+    end
+
+    it "rescues error and prints when error is raised" do
+      allow(container).to receive(:delete).
+        and_raise(::Docker::Error::ServerError, "device or resource busy")
+      docker.delete_container
+      $stderr.rewind
+      expect($stderr.read).to eql("Docker could not delete 1234: device or resource busy\n")
+    end
+  end
 end
