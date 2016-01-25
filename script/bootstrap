@@ -1,2 +1,2 @@
 #!/bin/bash
-bundle install -j4
+bundle install -j4 --path .bundle --binstubs bundler-bin
