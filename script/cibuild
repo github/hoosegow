@@ -1,2 +1,3 @@
 #!/bin/bash
+docker -v
 bundle exec rake spec
