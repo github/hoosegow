@@ -158,6 +158,7 @@ describe Hoosegow::Protocol::Inmate do
     stdin = StringIO.new(MessagePack.pack(['render', ['foobar']]))
     stdout = StringIO.new
     stdout.set_encoding('BINARY')
+    stdout = PeekAtWrittenEncodings.new(stdout)
     r,w = IO.pipe
     w.puts "STDOUT from somewhere"
 
@@ -165,7 +166,17 @@ describe Hoosegow::Protocol::Inmate do
 
     encoded_stdout = MessagePack.pack([:stdout, "STDOUT from somewhere\n"])
     encoded_return = MessagePack.pack([:return, 'raboof'])
-    expect(stdout.string.encoding).to eq("BINARY")
     expect([encoded_stdout+encoded_return, encoded_return+encoded_stdout]).to include(stdout.string)
+  end
+  
+  class PeekAtWrittenEncodings
+    def initialize(io)
+      @io = io
+    end
+    
+    def write(s)
+      $stderr.puts :string => s, :encoding => s.encoding
+      @io.write(s)
+    end
   end
 end
