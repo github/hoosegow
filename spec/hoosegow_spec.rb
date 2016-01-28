@@ -165,6 +165,7 @@ describe Hoosegow::Protocol::Inmate do
 
     encoded_stdout = MessagePack.pack([:stdout, "STDOUT from somewhere\n"])
     encoded_return = MessagePack.pack([:return, 'raboof'])
+    expect(stdout.string.encoding).to eq("BINARY")
     expect([encoded_stdout+encoded_return, encoded_return+encoded_stdout]).to include(stdout.string)
   end
 end
