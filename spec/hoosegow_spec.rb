@@ -160,6 +160,7 @@ describe Hoosegow::Protocol::Inmate do
     stdout.set_encoding('BINARY')
     stdout = PeekAtWrittenEncodings.new(stdout)
     r,w = IO.pipe
+    w.set_encoding('BINARY')
     w.puts "STDOUT from somewhere"
 
     Hoosegow::Protocol::Inmate.run(:inmate => inmate, :stdin => stdin, :stdout => stdout, :intercepted => r)
