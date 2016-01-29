@@ -178,5 +178,9 @@ describe Hoosegow::Protocol::Inmate do
       $stderr.puts :string => s, :encoding => s.encoding
       @io.write(s)
     end
+    
+    def string
+      @io.string
+    end
   end
 end
