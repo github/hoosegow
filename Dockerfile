@@ -43,4 +43,4 @@ WORKDIR /hoosegow
 RUN /bin/bash -l -c 'BUNDLE_JOBS=4 bundle install --path .bundle --without development test'
 
 # Command to run when `docker run hoosegow`
-ENTRYPOINT /bin/bash -l -c bin/hoosegow
+ENTRYPOINT /bin/bash -l -c 'bundle exec bin/hoosegow'
