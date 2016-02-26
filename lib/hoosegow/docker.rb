@@ -126,7 +126,7 @@ class Hoosegow
     # Returns response body or nil if no container was started.
     def delete_container
       return unless @container
-      @container.delete
+      @container.delete :v => 1
     rescue ::Docker::Error::ServerError => e
       $stderr.puts "Docker could not delete #{@container.id}: #{e}"
     end
