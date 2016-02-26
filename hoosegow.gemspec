@@ -2,7 +2,7 @@ require 'rake'
 
 Gem::Specification.new do |s|
   s.name        = 'hoosegow'
-  s.version     = '1.2.3'
+  s.version     = '1.2.4'
   s.summary     = "A Docker jail for ruby code"
   s.description = "Hoosegow provides an RPC layer on top of Docker containers so that you can isolate unsafe parts of your application."
   s.authors     = ["Ben Toews", "Matt Burke"]
