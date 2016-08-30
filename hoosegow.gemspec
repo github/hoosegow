@@ -1,5 +1,3 @@
-require 'rake'
-
 Gem::Specification.new do |s|
   s.name        = 'hoosegow'
   s.version     = '1.2.4'
