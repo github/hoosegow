@@ -90,7 +90,7 @@ class Hoosegow
           nil # Don't return anything from the inmate's `yield`.
         end
         report(:return, result)
-      rescue => e
+      rescue Exception => e
         report(:raise, {:class => e.class.name, :message => e.message, :backtrace => e.backtrace})
       end
 
