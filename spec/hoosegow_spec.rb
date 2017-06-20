@@ -120,7 +120,7 @@ describe Hoosegow::Protocol::Inmate do
 
   it "encodes exceptions" do
     inmate = Object.new
-    def inmate.render(s) ; raise 'boom' ; end
+    def inmate.render(s) ; raise Exception, 'boom' ; end
 
     stdin = StringIO.new(MessagePack.pack(['render', ['foobar']]))
     stdout = StringIO.new
@@ -131,7 +131,7 @@ describe Hoosegow::Protocol::Inmate do
 
     unpacked_type, unpacked_data = MessagePack.unpack(stdout.string)
     expect(unpacked_type).to eq('raise')
-    expect(unpacked_data).to include('class' => 'RuntimeError')
+    expect(unpacked_data).to include('class' => 'Exception')
     expect(unpacked_data).to include('message' => 'boom')
     expect(unpacked_data['backtrace']).to be_a(Array)
     expect(unpacked_data['backtrace'].first).to eq("#{__FILE__}:#{__LINE__ - 14}:in `render'")
