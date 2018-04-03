@@ -80,9 +80,11 @@ class Hoosegow
     # Returns nothing.
     def create_container(image)
       @container = ::Docker::Container.create @container_options.merge(
-        :StdinOnce => true,
-        :OpenStdin => true,
-        :Volumes   => volumes_for_create,
+        :StdinOnce  => true,
+        :OpenStdin  => true,
+        :HostConfig => {
+          :Binds    => volumes_for_bind
+        },
         :Image     => image
       )
       callback @after_create
@@ -92,7 +94,7 @@ class Hoosegow
     #
     # Returns nothing.
     def start_container
-      @container.start :Binds => volumes_for_bind
+      @container.start
       callback @after_start
     end
 
@@ -200,19 +202,7 @@ class Hoosegow
       end
     end
 
-    # Private: Generate the `Volumes` argument for creating a container.
-    #
-    # Given a hash of container_path => local_path in @volumes, generate a
-    # hash of container_path => {}.
-    def volumes_for_create
-      result = {}
-      each_volume do |container_path, local_path, permissions|
-        result[container_path] = {}
-      end
-      result
-    end
-
-    # Private: Generate the `Binds` argument for starting a container.
+    # Private: Generate the `Binds` argument for creating a container.
     #
     # Given a hash of container_path => local_path in @volumes, generate an
     # array of "local_path:container_path:rw".
