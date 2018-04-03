@@ -1,3 +1,4 @@
+require 'fileutils'
 require_relative '../lib/hoosegow'
 
 unless defined?(CONFIG)
@@ -43,6 +44,32 @@ describe Hoosegow::Docker do
       ] }
     end
   end
+
+  context "volume is writable" do
+    it "calls after_create" do
+      test_dir = File.join(Dir.pwd, 'volume-test')
+      FileUtils.remove_dir(test_dir, true)
+      FileUtils.mkpath(test_dir)
+
+      config = CONFIG.merge(
+        :Entrypoint => ['/usr/bin/touch',  '/volume-test/test'],
+        :volumes => { '/volume-test' => test_dir + ":rw"}
+      )
+      docker = Hoosegow::Docker.new(config)
+      begin
+        docker.create_container CONFIG[:image_name]
+        docker.start_container
+      ensure
+        docker.stop_container
+        docker.delete_container
+      end
+
+      exists = File.exists?(File.join(test_dir, 'test'))
+      expect(exists).to be_truthy
+      FileUtils.remove_dir(test_dir, true)
+    end
+  end
+
 
   context 'docker_url' do
     it "correctly generates TCP urls" do
