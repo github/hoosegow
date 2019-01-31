@@ -139,7 +139,7 @@ class Hoosegow
     # tarfile - Tarred data for creating image. See http://docs.docker.io/en/latest/api/docker_remote_api_v1.5/#build-an-image-from-dockerfile-via-stdin
     #
     # Returns Array of build result objects from the Docker API.
-    def build_image(name, tarfile)
+    def build_image(name, tarfile, build_opts = {})
       # Setup parser to receive chunks and yield parsed JSON objects.
       ret = []
       error = nil
@@ -151,7 +151,7 @@ class Hoosegow
       end
 
       # Make API call to create image.
-      opts = {:t => name, :rm => '1'}
+      opts = {:t => name, :rm => '1'}.merge(build_opts)
       ::Docker::Image.build_from_tar StringIO.new(tarfile), opts do |chunk|
         parser << chunk
       end

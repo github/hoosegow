@@ -131,8 +131,8 @@ class Hoosegow
   # the gem.
   #
   # Returns build output text. Raises ImageBuildError if there is a problem.
-  def build_image(&block)
-    docker.build_image image_name, image_bundle.tarball, &block
+  def build_image(build_opts = {}, &block)
+    docker.build_image image_name, image_bundle.tarball, build_opts, &block
   end
 
   # Private: The name of the docker image to use. If not specified manually,
