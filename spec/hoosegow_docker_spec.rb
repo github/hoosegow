@@ -75,7 +75,7 @@ describe Hoosegow::Docker do
 
     it "configures ExtraHosts option" do
       config = CONFIG.merge(
-        :Entrypoint => ['/bin/cp',  '/etc/hosts', '/volume-test/hosts'],
+        :Entrypoint => ['/bin/sh',  '-c', 'getent hosts some-service > /volume-test/out.txt'],
         :volumes => { '/volume-test' => test_dir + ":rw"},
         :HostConfig => {
           :ExtraHosts => ["some-service:127.0.0.1"]
@@ -90,13 +90,9 @@ describe Hoosegow::Docker do
         docker.delete_container
       end
 
-      # Ensure volume bind still works
-      exists = File.exists?(File.join(test_dir, 'hosts'))
-      expect(exists).to be_truthy
-
       # Ensure ExtraHosts config is set
-      contents = File.read(File.join(test_dir, 'hosts'))
-      expect(contents).to match("127.0.0.1\tsome-service")
+      contents = File.read(File.join(test_dir, 'out.txt'))
+      expect(contents).to match("127.0.0.1\s+some-service")
     end
   end
 
