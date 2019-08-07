@@ -1,6 +1,7 @@
 require 'yajl'
 require 'docker'
 require 'stringio'
+require 'active_support/core_ext/hash/deep_merge'
 
 require_relative 'exceptions'
 
@@ -79,7 +80,7 @@ class Hoosegow
     #
     # Returns nothing.
     def create_container(image)
-      @container = ::Docker::Container.create @container_options.merge(
+      @container = ::Docker::Container.create @container_options.deep_merge(
         :StdinOnce  => true,
         :OpenStdin  => true,
         :HostConfig => {
