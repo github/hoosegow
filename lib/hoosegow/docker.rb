@@ -1,7 +1,6 @@
 require 'yajl'
 require 'docker'
 require 'stringio'
-require 'active_support/core_ext/hash/deep_merge'
 
 require_relative 'exceptions'
 
@@ -80,13 +79,15 @@ class Hoosegow
     #
     # Returns nothing.
     def create_container(image)
-      @container = ::Docker::Container.create @container_options.deep_merge(
-        :StdinOnce  => true,
-        :OpenStdin  => true,
-        :HostConfig => {
-          :Binds    => volumes_for_bind
-        },
-        :Image     => image
+      create_options = default_container_options(image)
+
+      # Merge in additional :HostConfig options into default options
+      if @container_options.has_key?(:HostConfig)
+        create_options[:HostConfig].merge!(@container_options[:HostConfig])
+      end
+
+      @container = ::Docker::Container.create @container_options.merge(
+        create_options
       )
       callback @after_create
     end
@@ -173,6 +174,19 @@ class Hoosegow
     end
 
   private
+
+    # Private: Default options used to create containers
+    def default_container_options(image)
+      {
+        :StdinOnce  => true,
+        :OpenStdin  => true,
+        :HostConfig => {
+          :Binds    => volumes_for_bind
+        },
+        :Image     => image
+      }
+    end
+
     # Private: Set the docker URL, if related options are present.
     def set_docker_url!(options)
       if url = docker_url(options)
