@@ -22,6 +22,7 @@ Gem::Specification.new do |s|
   s.executables = ['hoosegow']
   s.homepage    = 'https://github.com/github/hoosegow'
   s.required_ruby_version = ">= 1.9.3"
+  s.add_dependency             "activesupport", "~> 5.2.3"
   s.add_development_dependency 'rake'
   s.add_development_dependency 'rspec',      '>= 2.14.1', '~> 2.14'
   s.add_runtime_dependency     'msgpack',    '~> 1.0.0'
