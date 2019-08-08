@@ -64,6 +64,38 @@ describe Hoosegow::Docker do
     end
   end
 
+  context "with custom connection options" do
+    before(:each) {
+      FileUtils.remove_dir(test_dir, true)
+      FileUtils.mkpath(test_dir)
+    }
+    after { FileUtils.remove_dir(test_dir, true) }
+
+    let(:test_dir) { File.join(Dir.pwd, 'volume-test') }
+
+    it "configures ExtraHosts option" do
+      config = CONFIG.merge(
+        :Entrypoint => ['/bin/sh',  '-c', 'getent hosts some-service > /volume-test/out.txt'],
+        :volumes => { '/volume-test' => test_dir + ":rw"},
+        :HostConfig => {
+          :ExtraHosts => ["some-service:127.0.0.1"]
+        }
+      )
+      docker = Hoosegow::Docker.new(config)
+      begin
+        docker.create_container CONFIG[:image_name]
+        docker.start_container
+      ensure
+        docker.stop_container
+        docker.delete_container
+      end
+
+      # Ensure ExtraHosts config is set
+      contents = File.read(File.join(test_dir, 'out.txt'))
+      expect(contents).to match("127.0.0.1\s+some-service")
+    end
+  end
+
 
   context 'docker_url' do
     it "correctly generates TCP urls" do
