@@ -24,7 +24,7 @@ It reads the Docker response as it comes in. It demultiplexes the docker output 
 
 Docker receives an HTTP POST with a body, and returns an HTTP response with a body. The HTTP request body is treated as `STDIN`, and the response body contains `STDOUT` and `STDERR`.
 
-See [documentation for attach](http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.7/#attach-to-a-container).
+See [documentation for attach](https://docs.docker.com/engine/api/v1.40/#operation/ContainerAttach).
 
 ### bin/hoosegow
 

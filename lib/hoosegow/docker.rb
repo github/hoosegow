@@ -36,7 +36,7 @@ class Hoosegow
     #                         }
     #                       `:volumes => { "/work" => "/home/localuser/work/to/do" }`
     #           :Other - any option with a capitalized key will be passed on
-    #                    to the 'create container' call. See http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.9/#create-a-container
+    #                    to the 'create container' call. See https://docs.docker.com/engine/api/v1.40/#operation/ContainerCreate
     def initialize(options = {})
       set_docker_url! options
       @after_create      = options[:after_create]
@@ -138,7 +138,7 @@ class Hoosegow
     # Public: Build a new image.
     #
     # name    - The name to give the image.
-    # tarfile - Tarred data for creating image. See http://docs.docker.io/en/latest/api/docker_remote_api_v1.5/#build-an-image-from-dockerfile-via-stdin
+    # tarfile - Tarred data for creating image. See https://docs.docker.com/engine/api/v1.40/#operation/ImageBuild
     #
     # Returns Array of build result objects from the Docker API.
     def build_image(name, tarfile)
