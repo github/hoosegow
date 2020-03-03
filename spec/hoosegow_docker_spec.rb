@@ -113,7 +113,7 @@ describe Hoosegow::Docker do
     let(:cb) { double("callback") }
 
     it "calls after_create" do
-      cb.should_receive(:call).with(instance_of(Hash))
+      expect(cb).to receive(:call).with(instance_of(Hash))
       docker = Hoosegow::Docker.new CONFIG.merge(:after_create => cb)
       begin
         docker.create_container CONFIG[:image_name]
@@ -124,7 +124,7 @@ describe Hoosegow::Docker do
     end
 
     it "calls after_start" do
-      cb.should_receive(:call).with(instance_of(Hash))
+      expect(cb).to receive(:call).with(instance_of(Hash))
       docker = Hoosegow::Docker.new CONFIG.merge(:after_start => cb)
       begin
         docker.create_container CONFIG[:image_name]
@@ -136,7 +136,7 @@ describe Hoosegow::Docker do
     end
 
     it "calls after_stop" do
-      cb.should_receive(:call).with(instance_of(Hash))
+      expect(cb).to receive(:call).with(instance_of(Hash))
       docker = Hoosegow::Docker.new CONFIG.merge(:after_stop => cb)
       begin
         docker.create_container CONFIG[:image_name]
