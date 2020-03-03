@@ -23,7 +23,7 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://github.com/github/hoosegow'
   s.required_ruby_version = ">= 1.9.3"
   s.add_development_dependency 'rake'
-  s.add_development_dependency 'rspec',      '~> 3.1.0'
+  s.add_development_dependency 'rspec',      '~> 3.2.0'
   s.add_runtime_dependency     'msgpack',    '~> 1.0.0'
   s.add_runtime_dependency     'yajl-ruby',  '>= 1.1.0',  '~> 1.1'
   s.add_runtime_dependency     'docker-api', '~> 1.19'
