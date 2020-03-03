@@ -13,6 +13,19 @@ inmate_dir = File.join(File.dirname(__FILE__), 'test_inmate')
 CONFIG[:inmate_dir] = inmate_dir
 CONFIG[:image_name] ||= Hoosegow.new(CONFIG).image_name
 
+describe "end to end" do
+  let(:hoosegow) { Hoosegow.new(CONFIG) }
+  after { hoosegow.cleanup }
+
+  it "works!" do
+    yielded = []
+    result = hoosegow.render_reverse("desrever eb dluohs siht") { |x| yielded << x }
+
+    expect(result).to eq("this should be reversed")
+    expect(yielded).to eq(["test"])
+  end
+end
+
 describe Hoosegow do
   context "no_proxy option" do
     it "runs directly if set" do
