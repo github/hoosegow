@@ -14,9 +14,15 @@ CONFIG[:inmate_dir] = inmate_dir
 CONFIG[:image_name] ||= Hoosegow.new(CONFIG).image_name
 
 describe "end to end" do
+  let(:hoosegow) { Hoosegow.new(CONFIG) }
+  after { hoosegow.cleanup }
+
   it "works!" do
-    hoosegow = Hoosegow.new CONFIG
-    expect(hoosegow.render_reverse("desrever eb dluohs siht")).to eq("this should be reversed")
+    yielded = []
+    result = hoosegow.render_reverse("desrever eb dluohs siht") { |x| yielded << x }
+
+    expect(result).to eq("this should be reversed")
+    expect(yielded).to eq(["test"])
   end
 end
 
