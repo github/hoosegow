@@ -17,14 +17,14 @@ describe Hoosegow do
   context "no_proxy option" do
     it "runs directly if set" do
       hoosegow = Hoosegow.new CONFIG.merge(:no_proxy => true)
-      hoosegow.stub :proxy_send => "not raboof"
-      hoosegow.render_reverse("foobar").should eq("raboof")
+      allow(hoosegow).to receive(:proxy_send).and_return("not raboof")
+      expect(hoosegow.render_reverse("foobar")).to eq("raboof")
     end
 
     it "runs via proxy if not set" do
       hoosegow = Hoosegow.new CONFIG
-      hoosegow.stub :proxy_send => "not raboof"
-      hoosegow.render_reverse("foobar").should eq("not raboof")
+      allow(hoosegow).to receive(:proxy_send).and_return("not raboof")
+      expect(hoosegow.render_reverse("foobar")).to eq("not raboof")
       hoosegow.cleanup
     end
   end
@@ -54,7 +54,7 @@ describe Hoosegow::Protocol::Proxy do
   end
 
   it "decodes a yield" do
-    block.should_receive(:call).with('a', 'b')
+    expect(block).to receive(:call).with('a', 'b')
     proxy.receive(:stdout, MessagePack.pack([:yield, ['a', 'b']]))
   end
 
@@ -83,12 +83,12 @@ describe Hoosegow::Protocol::Proxy do
   end
 
   it "decodes stdout" do
-    stdout.should_receive(:write).with('abc')
+    expect(stdout).to receive(:write).with('abc')
     proxy.receive(:stdout, MessagePack.pack([:stdout, 'abc']))
   end
 
   it "decodes stderr" do
-    stderr.should_receive(:write).with('abc')
+    expect(stderr).to receive(:write).with('abc')
     proxy.receive(:stderr, 'abc')
   end
 
@@ -103,7 +103,7 @@ end
 describe Hoosegow::Protocol::Inmate do
   it "calls appropriate render method" do
     inmate = double('inmate')
-    inmate.should_receive(:render).with('foobar').
+    expect(inmate).to receive(:render).with('foobar').
       and_yield(:a, 1).
       and_yield(:b, 2, 3).
       and_return('raboof')
@@ -143,17 +143,19 @@ describe Hoosegow::Protocol::Inmate do
     feed_stdin.write(MessagePack.pack(['render', ['foobar']]))
 
     inmate = double('inmate')
-    inmate.should_receive(:render).with('foobar').and_return('raboof')
+    expect(inmate).to receive(:render).with('foobar').and_return('raboof')
     stdout = StringIO.new
     stdout.set_encoding('BINARY')
     r,w = IO.pipe
 
-    timeout(2) { Hoosegow::Protocol::Inmate.run(:inmate => inmate, :stdin => stdin, :stdout => stdout, :intercepted => r) }
+    Timeout.timeout(2) do
+      Hoosegow::Protocol::Inmate.run(:inmate => inmate, :stdin => stdin, :stdout => stdout, :intercepted => r)
+    end
   end
 
   it "encodes stdout" do
     inmate = double('inmate')
-    inmate.should_receive(:render).with('foobar').and_return('raboof')
+    expect(inmate).to receive(:render).with('foobar').and_return('raboof')
 
     stdin = StringIO.new(MessagePack.pack(['render', ['foobar']]))
     stdout = StringIO.new
@@ -163,8 +165,7 @@ describe Hoosegow::Protocol::Inmate do
 
     Hoosegow::Protocol::Inmate.run(:inmate => inmate, :stdin => stdin, :stdout => stdout, :intercepted => r)
 
-    encoded_stdout = MessagePack.pack([:stdout, "STDOUT from somewhere\n"])
-    encoded_return = MessagePack.pack([:return, 'raboof'])
-    expect([encoded_stdout+encoded_return, encoded_return+encoded_stdout]).to include(stdout.string)
+    output = MessagePack::Unpacker.new(StringIO.new(stdout.string)).each.to_a
+    expect(output.sort).to eq([ ["return", "raboof"], ["stdout", "STDOUT from somewhere\n"] ])
   end
 end

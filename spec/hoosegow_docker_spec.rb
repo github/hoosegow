@@ -19,12 +19,12 @@ describe Hoosegow::Docker do
 
     context 'unspecified' do
       subject { described_class.new }
-      its(:volumes_for_bind) { should be_empty }
+      it { expect(subject.send(:volumes_for_bind)).to be_empty }
     end
 
     context 'empty' do
       let(:volumes) { {} }
-      its(:volumes_for_bind) { should be_empty }
+      it { expect(subject.send(:volumes_for_bind)).to be_empty }
     end
 
     context 'with volumes' do
@@ -32,10 +32,10 @@ describe Hoosegow::Docker do
         "/inside/path" => "/home/burke/data-for-container:rw",
         "/other/path" => "/etc/shared-config",
       } }
-      its(:volumes_for_bind) { should == [
+      it { expect(subject.send(:volumes_for_bind)).to eq([
         "/home/burke/data-for-container:/inside/path:rw",
         "/etc/shared-config:/other/path:ro",
-      ] }
+      ]) }
     end
   end
 
@@ -110,10 +110,10 @@ describe Hoosegow::Docker do
   end
 
   context "callbacks" do
-    let(:cb) { lambda { |info|  } }
+    let(:cb) { double("callback") }
 
     it "calls after_create" do
-      expect(cb).to receive(:call).with { |*args| args.first.is_a? Hash }
+      expect(cb).to receive(:call).with(instance_of(Hash))
       docker = Hoosegow::Docker.new CONFIG.merge(:after_create => cb)
       begin
         docker.create_container CONFIG[:image_name]
@@ -124,7 +124,7 @@ describe Hoosegow::Docker do
     end
 
     it "calls after_start" do
-      expect(cb).to receive(:call).with { |*args| args.first.is_a? Hash }
+      expect(cb).to receive(:call).with(instance_of(Hash))
       docker = Hoosegow::Docker.new CONFIG.merge(:after_start => cb)
       begin
         docker.create_container CONFIG[:image_name]
@@ -136,7 +136,7 @@ describe Hoosegow::Docker do
     end
 
     it "calls after_stop" do
-      expect(cb).to receive(:call).with { |*args| args.first.is_a? Hash }
+      expect(cb).to receive(:call).with(instance_of(Hash))
       docker = Hoosegow::Docker.new CONFIG.merge(:after_stop => cb)
       begin
         docker.create_container CONFIG[:image_name]
