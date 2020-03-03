@@ -148,7 +148,9 @@ describe Hoosegow::Protocol::Inmate do
     stdout.set_encoding('BINARY')
     r,w = IO.pipe
 
-    timeout(2) { Hoosegow::Protocol::Inmate.run(:inmate => inmate, :stdin => stdin, :stdout => stdout, :intercepted => r) }
+    Timeout.timeout(2) do
+      Hoosegow::Protocol::Inmate.run(:inmate => inmate, :stdin => stdin, :stdout => stdout, :intercepted => r)
+    end
   end
 
   it "encodes stdout" do
