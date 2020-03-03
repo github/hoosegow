@@ -163,8 +163,7 @@ describe Hoosegow::Protocol::Inmate do
 
     Hoosegow::Protocol::Inmate.run(:inmate => inmate, :stdin => stdin, :stdout => stdout, :intercepted => r)
 
-    encoded_stdout = MessagePack.pack([:stdout, "STDOUT from somewhere\n"])
-    encoded_return = MessagePack.pack([:return, 'raboof'])
-    expect([encoded_stdout+encoded_return, encoded_return+encoded_stdout]).to include(stdout.string)
+    output = MessagePack::Unpacker.new(StringIO.new(stdout.string)).each.to_a
+    expect(output.sort).to eq([ ["return", "raboof"], ["stdout", "STDOUT from somewhere\n"] ])
   end
 end
